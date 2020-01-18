@@ -304,7 +304,6 @@ class wasm3_dsp : public dsp {
             result = m3_CallWithArgs(f, 1, i_argv);
 
             uint64_t value = *(uint64_t*)(fInstance->stack);
-            printf("Result: %lld\n", value);
             return value;
         }
         
@@ -318,7 +317,6 @@ class wasm3_dsp : public dsp {
             result = m3_CallWithArgs(f, 1, i_argv);
             
             uint64_t value = *(uint64_t*)(fInstance->stack);
-            printf("Result: %lld\n", value);
             return value;
         }
         
@@ -337,7 +335,6 @@ class wasm3_dsp : public dsp {
             result = m3_CallWithArgs(f, 1, i_argv);
             
             uint64_t value = *(uint64_t*)(fInstance->stack);
-            printf("Result: %lld\n", value);
             return value;
         }
         

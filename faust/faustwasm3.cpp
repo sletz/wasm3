@@ -21,9 +21,14 @@
  architecture section is not modified.
  ************************************************************************/
 
+#include <libgen.h>
+
 #include "wasm3_dsp.h"
+
 #include "faust/audio/jack-dsp.h"
 #include "faust/gui/httpdUI.h"
+#include "faust/gui/GTKUI.h"
+#include "faust/gui/FUI.h"
 #include "faust/misc.h"
 
 list<GUI*> GUI::fGuiList;
@@ -37,6 +42,15 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
     
+    char name[256];
+    char filename[256];
+    char rcfilename[256];
+    char* home = getenv("HOME");
+    
+    snprintf(name, 255, "%s", basename(argv[0]));
+    snprintf(filename, 255, "%s", basename(argv[argc-1]));
+    snprintf(rcfilename, 255, "%s/.%s-%src", home, name, filename);
+    
     wasm3_dsp_factory factory(argv[1]);
     dsp* DSP = factory.createDSPInstance();
     
@@ -48,15 +62,21 @@ int main(int argc, char* argv[])
     httpdUI httpdinterface(argv[1], DSP->getNumInputs(), DSP->getNumOutputs(), argc, argv);
     DSP->buildUserInterface(&httpdinterface);
     
+    GTKUI interface(filename, &argc, &argv);
+    DSP->buildUserInterface(&interface);
+    
+    FUI finterface;
+    DSP->buildUserInterface(&finterface);
+    
+    // State (after UI construction)
+    finterface.recallState(rcfilename);
     audio.start();
     
     httpdinterface.run();
+    interface.run();
     
-    char c;
-    while ((c = getchar()) != 'q') {
-        usleep(1000000);
-    }
+    finterface.saveState(rcfilename);
     
-    audio.stop();    
+    audio.stop();
     return 0;
 }
