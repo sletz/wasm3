@@ -34,9 +34,15 @@
 list<GUI*> GUI::fGuiList;
 ztimedmap GUI::gTimedZoneMap;
 
+static bool endWith(const string& str, const string& suffix)
+{
+    size_t i = str.rfind(suffix);
+    return (i != string::npos) && (i == (str.length() - suffix.length()));
+}
+
 int main(int argc, char* argv[])
 {
-    if (argc == 1 || isopt(argv, "-h") || isopt(argv, "-help")) {
+    if (argc == 1 || isopt(argv, "-h") || isopt(argv, "-help") || !endWith(argv[1], ".wasm")) {
         cout << "faustwas3 foo.wasm" << endl;
         cout << "Open the http://127.0.0.1:5510 URL to get an http based control\n";
         exit(EXIT_FAILURE);

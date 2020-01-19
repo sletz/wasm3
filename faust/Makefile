@@ -10,7 +10,7 @@ wasm3_src=../source/*.c
 all: faustwasm3 
 
 libwasm3: $(wasm3_src)
-	$(CC) -Ofast -march=native $(wasm3_src) -Dd_m3LogOutput=0 -c 
+	$(CXX) -Ofast -march=native $(wasm3_src) -Dd_m3LogOutput=0 -c 
 	
 faustwasm3: faustwasm3.cpp wasm3_dsp.h wasm3_dsp.cpp libwasm3
 	$(CXX) -Ofast -march=native -std=c++11 faustwasm3.cpp wasm3_dsp.cpp m3_*.o `pkg-config --cflags --libs jack sndfile samplerate gtk+-2.0` $(LIB)/libHTTPDFaust.a -lmicrohttpd -dead_strip -o faustwasm3
