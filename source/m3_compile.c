@@ -331,10 +331,6 @@ M3Result  Push  (IM3Compilation o, u8 i_m3Type, i16 i_location)
                 o->function->maxStackSlots = stackIndex;
         }
 
-        // wasmStack tracks read counts for args & locals. otherwise, wasmStack represents slot location.
-        if (stackIndex < GetFunctionNumArgsAndLocals (o->function))
-            i_location = 0;
-
         o->wasmStack        [stackIndex] = i_location;
         o->typeStack        [stackIndex] = i_m3Type;
 
@@ -844,8 +840,6 @@ _   (ReadLEB_u32 (& localSlot, & o->wasm, o->wasmEnd));             //  printf (
         u16 preserveSlot;
 _       (IsLocalReferencedWithCurrentBlock (o, & preserveSlot, localSlot));  // preserve will be different than local, if referenced
 
-//        o->wasmStack [localSlot] |= 0x8000;
-
         if (preserveSlot == localSlot)
 _           (CopyTopSlot (o, localSlot))
         else
@@ -864,13 +858,14 @@ M3Result  Compile_GetLocal  (IM3Compilation o, u8 i_opcode)
 {
     M3Result result;
 
+_try {
     u32 localIndex;
 _   (ReadLEB_u32 (& localIndex, & o->wasm, o->wasmEnd));
 
     u8 type = o->typeStack [localIndex];
 _   (Push (o, type, localIndex));
 
-    _catch: return result;
+    } _catch: return result;
 }
 
 
@@ -1035,6 +1030,7 @@ M3Result  Compile_BranchTable  (IM3Compilation o, u8 i_opcode)
 {
     M3Result result;
 
+_try {
     u32 targetCount;
 _   (ReadLEB_u32 (& targetCount, & o->wasm, o->wasmEnd));
 
@@ -1099,8 +1095,7 @@ _           (AcquirePatch (o, & patch));
     o->block.isPolymorphic = true;
 
 //_   (UnwindBlockStack (o));
-
-    _catch: return result;
+    } _catch: return result;
 }
 
 
@@ -1108,6 +1103,7 @@ M3Result  CompileCallArgsReturn  (IM3Compilation o, u16 * o_stackOffset, IM3Func
 {
     M3Result result = m3Err_none;
 
+_try {
     // force use of at least one stack slot; this is to help ensure
     // the m3 stack overflows (and traps) before the native stack can overflow.
     // e.g. see Wasm spec test 'runaway' in call.wast
@@ -1136,7 +1132,7 @@ _       (Pop (o));
 _       (Push (o, i_type->returnType, execTop));
     }
 
-    _catch: return result;
+    } _catch: return result;
 }
 
 
@@ -1348,7 +1344,7 @@ _       (EmitOp (o, op_Branch));
 M3Result  Compile_If  (IM3Compilation o, u8 i_opcode)
 {
     M3Result result;
-
+_try {
 _   (PreserveNonTopRegisters (o));
 _   (PreserveArgsAndLocals (o));
 
@@ -1377,7 +1373,7 @@ _       (CompileElseBlock (o, pc, blockType));
     }
     else * pc = GetPC (o);
 
-    _catch: return result;
+    } _catch: return result;
 }
 
 
@@ -1596,6 +1592,7 @@ M3Result  Compile_Load_Store  (IM3Compilation o, u8 i_opcode)
 {
     M3Result result;
 
+_try {
     u32 alignHint, memoryOffset;
 
 _   (ReadLEB_u32 (& alignHint, & o->wasm, o->wasmEnd));
@@ -1609,7 +1606,7 @@ _       (PreserveRegisterIfOccupied (o, c_m3Type_f64));
 _   (Compile_Operator (o, i_opcode));
 
     EmitConstant (o, memoryOffset);
-
+}
     _catch: return result;
 }
 
@@ -2072,10 +2069,6 @@ _           (PushAllocatedSlot (o, type));
         }
 
 _       (CompileLocals (o));
-
-        // the stack for args/locals is used to track # of Sets
-        for (u32 i = 0; i < o->stackIndex; ++i)
-            o->wasmStack [i] = 0;
 
 _       (Compile_ReserveConstants (o));
 
