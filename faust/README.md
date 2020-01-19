@@ -1,7 +1,7 @@
 
 ## faustwasm3
 
-The **faustwasm3** tool loads a Faust generated wasm model and runs it using the wasm3 interpreter, JACK for the audio par and GTK for the GUI.
+The **faustwasm3** tool loads a Faust generated wasm model and runs it using the wasm3 interpreter, JACK for the audio, and GTK for the GUI.
 
 `faustwasm3 foo.wasm`
 
