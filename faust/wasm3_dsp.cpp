@@ -23,6 +23,8 @@
 
 #include "wasm3_dsp.h"
 
+using namespace std;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -202,31 +204,36 @@ extern "C" {
 }
 #endif
 
-void wasm3_dsp_factory::addFunction(const char* name, const char* type, ModuleFun fun)
-{
-    if (v_FindFunction(fModule, name)) {
-        M3Result result = m3_LinkRawFunction(fModule, "env", name, type, fun);
-        if (result) FATAL("addFunction: %s", result);
-    }
-}
-
 dsp* wasm3_dsp_factory::createDSPInstance()
 {
-   IM3Runtime instance = m3_NewRuntime(fEnv, 64*1024, NULL);
-    if (!instance) FATAL_RET("m3_NewRuntime failed");
+    return new wasm3_dsp(this);
+}
+
+wasm3_dsp::wasm3_dsp(wasm3_dsp_factory* factory)
+:fFactory(factory)
+{
+    fEnv = m3_NewEnvironment();
+    if (!fEnv) FATAL("m3_NewEnvironment failed");
     
-    M3Result result = m3_LoadModule(instance, fModule);
-    if (result) FATAL_RET("m3_LoadModule: %s", result);
+    M3Result result = m3_ParseModule(fEnv, &fModule, factory->fBytes, factory->fLen);
+    if (result) FATAL("m3_ParseModule: %s", result);
+    
+    fInstance = m3_NewRuntime(fEnv, 64*1024, NULL);
+    if (!fInstance) FATAL("m3_NewRuntime failed");
+    
+    result = m3_LoadModule(fInstance, fModule);
+    if (result) FATAL("m3_LoadModule: %s", result);
     
     uint32_t memorySize;
-    char* dsp_memory = (char*)m3_GetMemory(instance, &memorySize, 0);
-    
+    fMemory = (char*)m3_GetMemory(fInstance, &memorySize, 0);
     cout << "memorySize " << memorySize << endl;
-    string json = string(dsp_memory);
+   
+    if (!factory->fDecoder) {
+        string json = string(fMemory);
+        cout << "JSON " << json << endl;
+        factory->fDecoder = createJSONUIDecoder(json);
+    }
     
-    cout << "JSON " << json << endl;
-    if (!fDecoder) fDecoder = createJSONUIDecoder(json);
-
     addFunction("_abs", "i(i)", &m3_wasm3_absf);
     addFunction("_acosf", "f(f)", &m3_wasm3_acosf);
     addFunction("_asinf", "f(f)", &m3_wasm3_asinf);
@@ -249,12 +256,6 @@ dsp* wasm3_dsp_factory::createDSPInstance()
     addFunction("_sinhf", "f(f)", &m3_wasm3_sinhf);
     addFunction("_tanhf", "f(f)", &m3_wasm3_tanhf);
     
-    return new wasm3_dsp(this, instance, dsp_memory);
-}
-
-wasm3_dsp::wasm3_dsp(wasm3_dsp_factory* factory, IM3Runtime instance, char* memory)
-:fFactory(factory), fInstance(instance), fMemory(memory)
-{
     std::cout << "Libfaust version: " << fFactory->fDecoder->getLibVersion() << std::endl;
     std::cout << "Compilation options: " << fFactory->fDecoder->getCompileOptions() << std::endl;
     
@@ -304,7 +305,6 @@ wasm3_dsp::wasm3_dsp(wasm3_dsp_factory* factory, IM3Runtime instance, char* memo
         }
     }
 
-    M3Result result = m3_FindFunction(&fCompute, fInstance, "compute");
+    result = m3_FindFunction(&fCompute, fInstance, "compute");
     if (result) FATAL("m3_FindFunction: %s", result);
 }
-

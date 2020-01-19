@@ -42,8 +42,6 @@
 #include "../source/m3_env.h"
 #include "../source/m3_api_defs.h"
 
-using namespace std;
-
 #define FATAL(msg, ...) { printf("Fatal: " msg "\n", ##__VA_ARGS__); return; }
 #define FATAL_RET(msg, ...) { printf("Fatal: " msg "\n", ##__VA_ARGS__); return nullptr; }
 #define FATAL_INT(msg, ...) { printf("Fatal: " msg "\n", ##__VA_ARGS__); return -1; }
@@ -52,37 +50,26 @@ typedef const void* (ModuleFun) (IM3Runtime runtime, uint64_t* _sp, void* _mem);
 
 struct wasm3_dsp_factory : public dsp_factory {
     
-    IM3Environment fEnv;
-    IM3Module fModule;
     const uint8_t* fBytes;
+    int fLen;
     
     JSONUITemplatedDecoder* fDecoder;
     
-    void addFunction(const char* name, const char* type, ModuleFun fun);
-    
-    wasm3_dsp_factory(const string& filename)
+    wasm3_dsp_factory(const std::string& filename)
     {
         fDecoder = nullptr;
         
         std::ifstream is(filename, std::ifstream::binary);
         is.seekg(0, is.end);
-        int len = is.tellg();
+        fLen = is.tellg();
         is.seekg(0, is.beg);
-        fBytes = new uint8_t[len];
-        is.read((char*)fBytes, len);
-        
-        fEnv = m3_NewEnvironment();
-        if (!fEnv) FATAL("m3_NewEnvironment failed");
-        
-        M3Result result = m3_ParseModule(fEnv, &fModule, fBytes, len);
-        if (result) FATAL("m3_ParseModule: %s", result);
+        fBytes = new uint8_t[fLen];
+        is.read((char*)fBytes, fLen);
     }
     
     virtual ~wasm3_dsp_factory()
     {
         delete fDecoder;
-        m3_FreeModule(fModule);
-        m3_FreeEnvironment(fEnv);
         delete[] fBytes;
     }
     
@@ -112,6 +99,8 @@ class wasm3_dsp : public dsp {
     
         wasm3_dsp_factory* fFactory;
     
+        IM3Environment fEnv;
+        IM3Module fModule;
         IM3Runtime fInstance;
         IM3Function fCompute;
         char* fMemory;
@@ -122,13 +111,22 @@ class wasm3_dsp : public dsp {
         FAUSTFLOAT** fInputs;   // Wasm memory mapped to pointers
         FAUSTFLOAT** fOutputs;  // Wasm memory mapped to pointers
     
+        void addFunction(const char* name, const char* type, ModuleFun fun)
+        {
+            if (v_FindFunction(fModule, name)) {
+                M3Result result = m3_LinkRawFunction(fModule, "env", name, type, fun);
+                if (result) FATAL("addFunction: %s", result);
+            }
+        }
+
     public:
 
-        wasm3_dsp(wasm3_dsp_factory* factory, IM3Runtime instance, char* memory);
+        wasm3_dsp(wasm3_dsp_factory* factory);
     
         virtual ~wasm3_dsp()
         {
-            m3_FreeRuntime(fInstance);
+            m3_FreeRuntime(fInstance); // fModule is deallocated here
+            m3_FreeEnvironment(fEnv);
         }
         
         virtual int getNumInputs()
@@ -181,7 +179,7 @@ class wasm3_dsp : public dsp {
             M3Result result = m3_FindFunction(&f, fInstance, "init");
             if (result) FATAL("m3_FindFunction: %s", result);
             
-            const char* i_argv[3] = { "0", to_string(sample_rate).c_str(), NULL };
+            const char* i_argv[3] = { "0", std::to_string(sample_rate).c_str(), NULL };
             result = m3_CallWithArgs(f, 2, i_argv);
         }
         
@@ -191,7 +189,7 @@ class wasm3_dsp : public dsp {
             M3Result result = m3_FindFunction(&f, fInstance, "instanceInit");
             if (result) FATAL("m3_FindFunction: %s", result);
             
-            const char* i_argv[3] = { "0", to_string(sample_rate).c_str(), NULL };
+            const char* i_argv[3] = { "0", std::to_string(sample_rate).c_str(), NULL };
             result = m3_CallWithArgs(f, 2, i_argv);
         }
         
@@ -201,7 +199,7 @@ class wasm3_dsp : public dsp {
             M3Result result = m3_FindFunction(&f, fInstance, "instanceConstants");
             if (result) FATAL("m3_FindFunction: %s", result);
             
-            const char* i_argv[3] = { "0", to_string(sample_rate).c_str(), NULL };
+            const char* i_argv[3] = { "0", std::to_string(sample_rate).c_str(), NULL };
             result = m3_CallWithArgs(f, 2, i_argv);
         }
         
@@ -244,7 +242,7 @@ class wasm3_dsp : public dsp {
             }
             
             // Call wasm code
-            const char* i_argv[5] = { "0", to_string(count).c_str(), to_string(fWasmInputs).c_str(), to_string(fWasmOutputs).c_str(), NULL };
+            const char* i_argv[5] = { "0", std::to_string(count).c_str(), std::to_string(fWasmInputs).c_str(), std::to_string(fWasmOutputs).c_str(), NULL };
             M3Result result = m3_CallWithArgs(fCompute, 4, i_argv);
             
             // Copy audio outputs

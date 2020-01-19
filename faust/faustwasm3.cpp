@@ -31,6 +31,8 @@
 #include "faust/gui/FUI.h"
 #include "faust/misc.h"
 
+using namespace std;
+
 list<GUI*> GUI::fGuiList;
 ztimedmap GUI::gTimedZoneMap;
 
@@ -59,6 +61,8 @@ int main(int argc, char* argv[])
     
     wasm3_dsp_factory factory(argv[1]);
     dsp* DSP = factory.createDSPInstance();
+    //delete DSP;
+    //DSP = factory.createDSPInstance();
     
     jackaudio audio;
     if (!audio.init(argv[1], DSP)) {
@@ -84,5 +88,7 @@ int main(int argc, char* argv[])
     finterface.saveState(rcfilename);
     
     audio.stop();
+    
+    delete DSP;
     return 0;
 }
