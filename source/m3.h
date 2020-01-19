@@ -212,6 +212,8 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
 //  functions
 //-------------------------------------------------------------------------------------------------------------------------------
 
+    void*               v_FindFunction(IM3Module i_module, const char * const i_name);
+    
     M3Result            m3_FindFunction             (IM3Function *          o_function,
                                                      IM3Runtime             i_runtime,
                                                      const char * const     i_functionName);

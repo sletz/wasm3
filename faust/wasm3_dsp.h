@@ -33,18 +33,22 @@
 #include <cmath>
 #include <vector>
 #include <unistd.h>
+#include <stdint.h>
 
 #include "faust/dsp/dsp.h"
 #include "faust/gui/JSONUIDecoder.h"
 
 #include "../source/m3.h"
 #include "../source/m3_env.h"
+#include "../source/m3_api_defs.h"
 
 using namespace std;
 
 #define FATAL(msg, ...) { printf("Fatal: " msg "\n", ##__VA_ARGS__); return; }
 #define FATAL_RET(msg, ...) { printf("Fatal: " msg "\n", ##__VA_ARGS__); return nullptr; }
 #define FATAL_INT(msg, ...) { printf("Fatal: " msg "\n", ##__VA_ARGS__); return -1; }
+
+typedef const void* (ModuleFun) (IM3Runtime runtime, uint64_t* _sp, void* _mem);
 
 struct wasm3_dsp_factory : public dsp_factory {
     
@@ -54,168 +58,8 @@ struct wasm3_dsp_factory : public dsp_factory {
     
     JSONUITemplatedDecoder* fDecoder;
     
-    //wasm3_module_t* fModule;
-    //wasm3_byte_array fModuleNameBytes;
-  
-    //vector<wasm3_import_func_t*> fFunctionList;
+    void addFunction(const char* name, const char* type, ModuleFun fun);
     
-    static void print_wasm3_error()
-    {
-        /*
-        int error_len = wasm3_last_error_length();
-        char* error_str = (char*)malloc(error_len);
-        wasm3_last_error_message(error_str, error_len);
-        printf("Error str: `%s`\n", error_str);
-        free(error_str);
-        */
-    }
-    
-    /*
-    // Int: 1 function
-    static int _abs(wasm3_instance_context_t* ctx, int val) { return std::abs(val); }
-    
-    // Float: 14 functions
-    static float _acosf(wasm3_instance_context_t* ctx, float val) { return std::acos(val); }
-    static float _asinf(wasm3_instance_context_t* ctx, float val) { return std::asin(val); }
-    static float _atanf(wasm3_instance_context_t* ctx, float val) { return std::atan(val); }
-    static float _atan2f(wasm3_instance_context_t* ctx, float v1, float v2) { return std::atan2(v1, v2); }
-    static float _cosf(wasm3_instance_context_t* ctx, float val) { return std::cos(val); }
-    static float _expf(wasm3_instance_context_t* ctx, float val) { return std::exp(val); }
-    static float _fmodf(wasm3_instance_context_t* ctx, float v1, float v2) { return std::fmod(v1, v2); }
-    static float _logf(wasm3_instance_context_t* ctx, float val) { return std::log(val); }
-    static float _log10f(wasm3_instance_context_t* ctx, float val) { return std::log10(val); }
-    static float _powf(wasm3_instance_context_t* ctx, float v1, float v2) { return std::pow(v1, v2); }
-    static float _remainderf(wasm3_instance_context_t* ctx, float v1, float v2) { return std::remainder(v1, v2); }
-    static float _roundf(wasm3_instance_context_t* ctx, float val) { return std::round(val); }
-    static float _sinf(wasm3_instance_context_t* ctx, float val) { return std::sin(val); }
-    static float _tanf(wasm3_instance_context_t* ctx, float val) { return std::tan(val); }
-    
-    // Hyperbolic: 6 functions
-    static float _acoshf(wasm3_instance_context_t* ctx, float val) { return std::acosh(val); }
-    static float _asinhf(wasm3_instance_context_t* ctx, float val) { return std::asinh(val); }
-    static float _atanhf(wasm3_instance_context_t* ctx, float val) { return std::atanh(val); }
-    static float _coshf(wasm3_instance_context_t* ctx, float val) { return std::cosh(val); }
-    static float _sinhf(wasm3_instance_context_t* ctx, float val) { return std::sinh(val); }
-    static float _tanhf(wasm3_instance_context_t* ctx, float val) { return std::tanh(val); }
-    
-    // Double: 14 functions
-    static double _acos(wasm3_instance_context_t* ctx, double val) { return std::acos(val); }
-    static double _asin(wasm3_instance_context_t* ctx, double val) { return std::asin(val); }
-    static double _atan(wasm3_instance_context_t* ctx, double val) { return std::atan(val); }
-    static double _atan2(wasm3_instance_context_t* ctx, double v1, double v2) { return std::atan2(v1, v2); }
-    static double _cos(wasm3_instance_context_t* ctx, double val) { return std::cos(val); }
-    static double _exp(wasm3_instance_context_t* ctx, double val) { return std::exp(val); }
-    static double _fmod(wasm3_instance_context_t* ctx, double v1, double v2) { return std::fmod(v1, v2); }
-    static double _log(wasm3_instance_context_t* ctx, double val) { return std::log(val); }
-    static double _log10(wasm3_instance_context_t* ctx, double val) { return std::log10(val); }
-    static double _pow(wasm3_instance_context_t* ctx, double v1, double v2) { return std::pow(v1, v2); }
-    static double _remainder(wasm3_instance_context_t* ctx, double v1, double v2) { return std::remainder(v1, v2); }
-    static double _round(wasm3_instance_context_t* ctx, double val) { return std::round(val); }
-    static double _sin(wasm3_instance_context_t* ctx, double val) { return std::sin(val); }
-    static double _tan(wasm3_instance_context_t* ctx, double val) { return std::tan(val); }
-    
-    // Hyperbolic: 6 functions
-    static float _acosh(wasm3_instance_context_t* ctx, float val) { return std::acosh(val); }
-    static float _asinh(wasm3_instance_context_t* ctx, float val) { return std::asinh(val); }
-    static float _atanh(wasm3_instance_context_t* ctx, float val) { return std::atanh(val); }
-    static float _cosh(wasm3_instance_context_t* ctx, float val) { return std::cosh(val); }
-    static float _sinh(wasm3_instance_context_t* ctx, float val) { return std::sinh(val); }
-    static float _tanh(wasm3_instance_context_t* ctx, float val) { return std::tanh(val); }
-    
-    // Float
-    typedef float (*math_unary_float_fun)(wasm3_instance_context_t* ctx, float val);
-    typedef float (*math_binary_float_fun)(wasm3_instance_context_t* ctx, float val1, float val2);
-    
-    // double
-    typedef double (*math_unary_double_fun)(wasm3_instance_context_t* ctx, double val);
-    typedef double (*math_binary_double_fun)(wasm3_instance_context_t* ctx, double val1, double val2);
-    
-    typedef int (*math_unary_int_fun)(wasm3_instance_context_t* ctx, int val);
-
-    template <class FUN_TYPE, wasm3_value_tag REAL>
-    wasm3_import_t createRealUnary(const char* import_name, FUN_TYPE fun)
-    {
-        wasm3_value_tag params_sig[] = { REAL };
-        wasm3_value_tag returns_sig[] = { REAL };
-        
-        wasm3_byte_array import_name_bytes;
-        import_name_bytes.bytes = (const uint8_t*)import_name;
-        import_name_bytes.bytes_len = strlen(import_name);
-        
-        wasm3_import_func_t* func = wasm3_import_func_new((void (*)(void *))fun, params_sig, 1, returns_sig, 1);
-        fFunctionList.push_back(func);
-        
-        wasm3_import_t func_import;
-        func_import.module_name = fModuleNameBytes;
-        func_import.import_name = import_name_bytes;
-        func_import.tag = wasm3_import_export_kind::WASM_FUNCTION;
-        func_import.value.func = func;
-        
-        return func_import;
-    }
-    
-    template <class FUN_TYPE, wasm3_value_tag REAL>
-    wasm3_import_t createRealBinary(const char* import_name, FUN_TYPE fun)
-    {
-        wasm3_value_tag params_sig[] = { REAL, REAL };
-        wasm3_value_tag returns_sig[] = { REAL };
-        
-        wasm3_byte_array import_name_bytes;
-        import_name_bytes.bytes = (const uint8_t*)import_name;
-        import_name_bytes.bytes_len = strlen(import_name);
-        
-        wasm3_import_func_t* func = wasm3_import_func_new((void (*)(void *))fun, params_sig, 2, returns_sig, 1);
-        fFunctionList.push_back(func);
-        
-        wasm3_import_t func_import;
-        func_import.module_name = fModuleNameBytes;
-        func_import.import_name = import_name_bytes;
-        func_import.tag = wasm3_import_export_kind::WASM_FUNCTION;
-        func_import.value.func = func;
-        
-        return func_import;
-    }
-    
-    wasm3_import_t createFloatUnary(const char* import_name, math_unary_float_fun fun)
-    {
-        return createRealUnary<math_unary_float_fun, wasm3_value_tag::WASM_F32>(import_name, fun);
-    }
-    wasm3_import_t createDoubleUnary(const char* import_name, math_unary_double_fun fun)
-    {
-        return createRealUnary<math_unary_double_fun, wasm3_value_tag::WASM_F64>(import_name, fun);
-    }
-    
-    wasm3_import_t createFloatBinary(const char* import_name, math_binary_float_fun fun)
-    {
-        return createRealBinary<math_binary_float_fun, wasm3_value_tag::WASM_F32>(import_name, fun);
-    }
-    wasm3_import_t createDoubleBinary(const char* import_name, math_binary_double_fun fun)
-    {
-        return createRealBinary<math_binary_double_fun, wasm3_value_tag::WASM_F64>(import_name, fun);
-    }
-    
-    wasm3_import_t createIntUnary(const char* import_name, math_unary_int_fun fun)
-    {
-        wasm3_value_tag params_sig[] = { wasm3_value_tag::WASM_I32 };
-        wasm3_value_tag returns_sig[] = { wasm3_value_tag::WASM_I32 };
-        
-        wasm3_byte_array import_name_bytes;
-        import_name_bytes.bytes = (const uint8_t*)import_name;
-        import_name_bytes.bytes_len = strlen(import_name);
-        
-        wasm3_import_func_t* func = wasm3_import_func_new((void (*)(void *))fun, params_sig, 1, returns_sig, 1);
-        fFunctionList.push_back(func);
-        
-        wasm3_import_t func_import;
-        func_import.module_name = fModuleNameBytes;
-        func_import.import_name = import_name_bytes;
-        func_import.tag = wasm3_import_export_kind::WASM_FUNCTION;
-        func_import.value.func = func;
-        
-        return func_import;
-    }
-    */
-
     wasm3_dsp_factory(const string& filename)
     {
         fDecoder = nullptr;
@@ -240,13 +84,6 @@ struct wasm3_dsp_factory : public dsp_factory {
         m3_FreeModule(fModule);
         m3_FreeEnvironment(fEnv);
         delete[] fBytes;
-        
-        /*
-        wasm3_module_destroy(fModule);
-        for (auto& it : fFunctionList) {
-            wasm3_import_func_destroy(it);
-        }
-        */
     }
     
     std::string getName() { return fDecoder->getName(); }

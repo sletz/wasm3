@@ -23,102 +23,196 @@
 
 #include "wasm3_dsp.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+    static m3ApiRawFunction(m3_wasm3_absf)
+    {
+        m3ApiReturnType (int32_t)
+        m3ApiGetArg(int32_t, val)
+        m3ApiReturn(std::abs(val));
+        return m3Err_none;
+    }
+
+    static m3ApiRawFunction(m3_wasm3_acosf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::acos(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_asinf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::asin(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_atanf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::atan(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_atan2f)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val1)
+        m3ApiGetArg(float, val2)
+        m3ApiReturn(std::atan2(val1, val2));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_cosf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::cos(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_expf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::exp(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_fmodf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val1)
+        m3ApiGetArg(float, val2)
+        m3ApiReturn(std::fmod(val1, val2));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_logf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::log(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_log10f)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::log10(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_powf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val1)
+        m3ApiGetArg(float, val2)
+        m3ApiReturn(std::pow(val1, val2));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_remainderf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val1)
+        m3ApiGetArg(float, val2)
+        m3ApiReturn(std::remainder(val1, val2));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_roundf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::round(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_sinf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::sin(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_tanf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::tan(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_acoshf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::acosh(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_asinhf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::asinh(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_atanhf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::atanh(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_coshf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::cosh(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_sinhf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::sinh(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_tanhf)
+    {
+        m3ApiReturnType (float)
+        m3ApiGetArg(float, val)
+        m3ApiReturn(std::tanh(val));
+        return m3Err_none;
+    }
+#ifdef __cplusplus
+}
+#endif
+
+void wasm3_dsp_factory::addFunction(const char* name, const char* type, ModuleFun fun)
+{
+    if (v_FindFunction(fModule, name)) {
+        M3Result result = m3_LinkRawFunction(fModule, "env", name, type, fun);
+        if (result) FATAL("addFunction: %s", result);
+    }
+}
+
 dsp* wasm3_dsp_factory::createDSPInstance()
 {
-    // Env
-    const char* module_name = "env";
-    
-    /*
-    fModuleNameBytes.bytes = (const uint8_t*)module_name;
-    fModuleNameBytes.bytes_len = strlen(module_name);
-    
-    wasm3_import_t imports[] = {
-        
-        // Int
-        createIntUnary("_abs", _abs),
-        
-        // Float
-        createFloatUnary("_acosf", _acosf),
-        createFloatUnary("_asinf", _asinf),
-        createFloatUnary("_atanf", _atanf),
-        createFloatBinary("_atan2f", _atan2f),
-        createFloatUnary("_cosf", _cosf),
-        createFloatUnary("_expf", _expf),
-        createFloatBinary("_fmodf", _fmodf),
-        createFloatUnary("_logf", _logf),
-        createFloatUnary("_log10f", _log10f),
-        createFloatBinary("_powf", _powf),
-        createFloatBinary("_remainderf", _remainderf),
-        createFloatUnary("_roundf", _roundf),
-        createFloatUnary("_sinf", _sinf),
-        createFloatUnary("_tanf", _tanf),
-        
-        // Hyperbolic
-        createFloatUnary("_acoshf", _acoshf),
-        createFloatUnary("_asinhf", _asinhf),
-        createFloatUnary("_atanhf", _atanhf),
-        createFloatUnary("_coshf", _coshf),
-        createFloatUnary("_sinhf", _sinhf),
-        createFloatUnary("_tanhf", _tanhf),
-        
-        // Double
-        createDoubleUnary("_acos", _acos),
-        createDoubleUnary("_asin", _asin),
-        createDoubleUnary("_atan", _atan),
-        createDoubleBinary("_atan2", _atan2),
-        createDoubleUnary("_cos", _cos),
-        createDoubleUnary("_exp", _exp),
-        createDoubleBinary("_fmod", _fmod),
-        createDoubleUnary("_log", _log),
-        createDoubleUnary("_log10", _log10),
-        createDoubleBinary("_pow", _pow),
-        createDoubleBinary("_remainder", _remainder),
-        createDoubleUnary("_round", _round),
-        createDoubleUnary("_sin", _sin),
-        createDoubleUnary("_tan", _tan),
-        
-        // Hyperbolic
-        createFloatUnary("_acosh", _acosh),
-        createFloatUnary("_asinh", _asinh),
-        createFloatUnary("_atanh", _atanh),
-        createFloatUnary("_cosh", _cosh),
-        createFloatUnary("_sinh", _sinh),
-        createFloatUnary("_tanh", _tanh),
-    };
-    
-    wasm3_instance_t* instance = nullptr;
-    wasm3_result_t instantiate_result = wasm3_module_instantiate(fModule, &instance, imports, 1 + (14 + 6) * 2);
-    if (instantiate_result != wasm3_result_t::wasm3_OK) print_wasm3_error();
-    
-    assert(instantiate_result == wasm3_result_t::wasm3_OK);
-    
-    // Get all exports.
-    wasm3_exports_t* exports = nullptr;
-    wasm3_instance_exports(instance, &exports);
-    
-    // Memory is as index 11
-    wasm3_export_t* export1 = wasm3_exports_get(exports, 11);
-    wasm3_import_export_kind kind = wasm3_export_kind(export1);
-    assert(kind == wasm3_import_export_kind::WASM_MEMORY);
-    
-    // Cast the export into a memory.
-    wasm3_memory_t* memory;
-    wasm3_result_t export_to_memory_result = wasm3_export_to_memory(export1, &memory);
-    assert(export_to_memory_result == wasm3_result_t::wasm3_OK);
-    
-    // JSON is located at offset 0 in the memory segment
-    char* dsp_memory = (char*)wasm3_memory_data(memory);
-    string json = string(dsp_memory);
-    
-    // Creates fDecoder onde
-    if (!fDecoder) fDecoder = createJSONUIDecoder(json);
-
-    wasm3_exports_destroy(exports);
-    
-    return new wasm3_dsp(this, instance, dsp_memory);
-    */
-    
-    IM3Runtime instance = m3_NewRuntime(fEnv, 64*1024, NULL);
+   IM3Runtime instance = m3_NewRuntime(fEnv, 64*1024, NULL);
     if (!instance) FATAL_RET("m3_NewRuntime failed");
     
     M3Result result = m3_LoadModule(instance, fModule);
@@ -132,7 +226,29 @@ dsp* wasm3_dsp_factory::createDSPInstance()
     
     cout << "JSON " << json << endl;
     if (!fDecoder) fDecoder = createJSONUIDecoder(json);
-   
+
+    addFunction("_abs", "i(i)", &m3_wasm3_absf);
+    addFunction("_acosf", "f(f)", &m3_wasm3_acosf);
+    addFunction("_asinf", "f(f)", &m3_wasm3_asinf);
+    addFunction("_atanf", "f(f)", &m3_wasm3_atanf);
+    addFunction("_atan2f", "f(ff)", &m3_wasm3_atan2f);
+    addFunction("_cosf", "f(f)", &m3_wasm3_cosf);
+    addFunction("_expf", "f(f)", &m3_wasm3_expf);
+    addFunction("_fmodf", "f(ff)", &m3_wasm3_fmodf);
+    addFunction("_logf", "f(f)", &m3_wasm3_logf);
+    addFunction("_log10f", "f(f)", &m3_wasm3_log10f);
+    addFunction("_powf", "f(ff)", &m3_wasm3_powf);
+    addFunction("_remainderf", "f(ff)", &m3_wasm3_remainderf);
+    addFunction("_roundf", "f(f)", &m3_wasm3_roundf);
+    addFunction("_sinf", "f(f)", &m3_wasm3_sinf);
+    addFunction("_tanf", "f(f)", &m3_wasm3_tanf);
+    addFunction("_acoshf", "f(f)", &m3_wasm3_acoshf);
+    addFunction("_asinhf", "f(f)", &m3_wasm3_asinhf);
+    addFunction("_atanhf", "f(f)", &m3_wasm3_atanhf);
+    addFunction("_coshf", "f(f)", &m3_wasm3_coshf);
+    addFunction("_sinhf", "f(f)", &m3_wasm3_sinhf);
+    addFunction("_tanhf", "f(f)", &m3_wasm3_tanhf);
+    
     return new wasm3_dsp(this, instance, dsp_memory);
 }
 
