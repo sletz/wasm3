@@ -24,7 +24,6 @@
 #include <libgen.h>
 
 #include "wasm3_dsp.h"
-
 #include "faust/audio/jack-dsp.h"
 #include "faust/gui/httpdUI.h"
 #include "faust/gui/GTKUI.h"

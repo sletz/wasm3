@@ -38,7 +38,7 @@
 #include "faust/dsp/dsp.h"
 #include "faust/gui/JSONUIDecoder.h"
 
-#include "../source/m3.h"
+#include "../source/wasm3.h"
 #include "../source/m3_env.h"
 #include "../source/m3_api_defs.h"
 
