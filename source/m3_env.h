@@ -8,7 +8,7 @@
 #ifndef m3_env_h
 #define m3_env_h
 
-#include "m3.h"
+#include "wasm3.h"
 #include "m3_code.h"
 #include "m3_exec.h"
 #include "m3_compile.h"
@@ -223,6 +223,7 @@ typedef struct M3Runtime
     M3Result                runtimeError;
 
     M3Memory                memory;
+    u32                     memoryLimit;
 
     M3ErrorInfo             error;
 #if defined(d_m3VerboseLogs)
