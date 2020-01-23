@@ -81,16 +81,13 @@ int main(int argc, char* argv[])
         return 0;
     }
     
-    if (is_midi) {
-        midiinterface = new MidiUI(&audio);
-        DSP->buildUserInterface(midiinterface);
-    }
-    
     if (nvoices > 0) {
         audio.addMidiIn(dsp_poly);
     }
     
     if (is_midi) {
+        midiinterface = new MidiUI(&audio);
+        DSP->buildUserInterface(midiinterface);
         midiinterface->run();
     }
     

@@ -226,7 +226,6 @@ wasm3_dsp::wasm3_dsp(wasm3_dsp_factory* factory)
     
     uint32_t memorySize;
     fMemory = (char*)m3_GetMemory(fInstance, &memorySize, 0);
-    cout << "memorySize " << memorySize << endl;
    
     if (!factory->fDecoder) {
         string json = string(fMemory);
