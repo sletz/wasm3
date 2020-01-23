@@ -8,7 +8,7 @@ The **faustwasm3** tool loads a Faust generated wasm module and runs it using th
 Here are the available options:
 
 - `-nvoices N to start the DSP in polyphonic mode with N voices`
-- `-all' to active the 'all voices always playing' mode`
+- `-midi to activate MIDI control`
 
 To test, clone the repository, and in the 'faust' folder:
 
