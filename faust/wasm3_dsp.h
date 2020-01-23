@@ -225,8 +225,7 @@ class wasm3_dsp : public dsp {
        
         virtual dsp* clone()
         {
-            assert(false);
-            return nullptr;
+            return new wasm3_dsp(fFactory);
         }
        
         virtual void metadata(Meta* m)
