@@ -23,6 +23,12 @@
 
 #include <libgen.h>
 
+/*
+#ifndef FAUSTFLOAT
+#define FAUSTFLOAT double
+#endif
+*/
+
 #include "wasm3_dsp.h"
 
 #include "faust/audio/jack-dsp.h"

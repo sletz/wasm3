@@ -29,7 +29,8 @@ using namespace std;
 extern "C" {
 #endif
     
-    static m3ApiRawFunction(m3_wasm3_absf)
+    // Integer
+    static m3ApiRawFunction(m3_wasm3_abs)
     {
         m3ApiReturnType (int32_t)
         m3ApiGetArg(int32_t, val)
@@ -37,6 +38,7 @@ extern "C" {
         return m3Err_none;
     }
 
+    // Float versions
     static m3ApiRawFunction(m3_wasm3_acosf)
     {
         m3ApiReturnType (float)
@@ -200,6 +202,172 @@ extern "C" {
         m3ApiReturn(std::tanh(val));
         return m3Err_none;
     }
+    
+    // Double versions
+    static m3ApiRawFunction(m3_wasm3_acos)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::acos(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_asin)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::asin(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_atan)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::atan(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_atan2)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val1)
+        m3ApiGetArg(double, val2)
+        m3ApiReturn(std::atan2(val1, val2));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_cos)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::cos(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_exp)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::exp(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_fmod)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val1)
+        m3ApiGetArg(double, val2)
+        m3ApiReturn(std::fmod(val1, val2));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_log)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::log(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_log10)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::log10(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_pow)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val1)
+        m3ApiGetArg(double, val2)
+        m3ApiReturn(std::pow(val1, val2));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_remainder)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val1)
+        m3ApiGetArg(double, val2)
+        m3ApiReturn(std::remainder(val1, val2));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_round)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::round(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_sin)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::sin(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_tan)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::tan(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_acosh)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::acosh(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_asinh)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::asinh(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_atanh)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::atanh(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_cosh)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::cosh(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_sinh)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::sinh(val));
+        return m3Err_none;
+    }
+    
+    static m3ApiRawFunction(m3_wasm3_tanh)
+    {
+        m3ApiReturnType (double)
+        m3ApiGetArg(double, val)
+        m3ApiReturn(std::tanh(val));
+        return m3Err_none;
+    }
+    
 #ifdef __cplusplus
 }
 #endif
@@ -233,27 +401,51 @@ wasm3_dsp::wasm3_dsp(wasm3_dsp_factory* factory)
         factory->fDecoder = createJSONUIDecoder(json);
     }
     
-    addFunction("_abs", "i(i)", &m3_wasm3_absf);
-    addFunction("_acosf", "f(f)", &m3_wasm3_acosf);
-    addFunction("_asinf", "f(f)", &m3_wasm3_asinf);
-    addFunction("_atanf", "f(f)", &m3_wasm3_atanf);
-    addFunction("_atan2f", "f(ff)", &m3_wasm3_atan2f);
-    addFunction("_cosf", "f(f)", &m3_wasm3_cosf);
-    addFunction("_expf", "f(f)", &m3_wasm3_expf);
-    addFunction("_fmodf", "f(ff)", &m3_wasm3_fmodf);
-    addFunction("_logf", "f(f)", &m3_wasm3_logf);
-    addFunction("_log10f", "f(f)", &m3_wasm3_log10f);
-    addFunction("_powf", "f(ff)", &m3_wasm3_powf);
-    addFunction("_remainderf", "f(ff)", &m3_wasm3_remainderf);
-    addFunction("_roundf", "f(f)", &m3_wasm3_roundf);
-    addFunction("_sinf", "f(f)", &m3_wasm3_sinf);
-    addFunction("_tanf", "f(f)", &m3_wasm3_tanf);
-    addFunction("_acoshf", "f(f)", &m3_wasm3_acoshf);
-    addFunction("_asinhf", "f(f)", &m3_wasm3_asinhf);
-    addFunction("_atanhf", "f(f)", &m3_wasm3_atanhf);
-    addFunction("_coshf", "f(f)", &m3_wasm3_coshf);
-    addFunction("_sinhf", "f(f)", &m3_wasm3_sinhf);
-    addFunction("_tanhf", "f(f)", &m3_wasm3_tanhf);
+    if (factory->fDecoder->hasCompileOption("-double")) {
+        addFunction("_abs", "i(i)", &m3_wasm3_abs);
+        addFunction("_acos", "F(F)", &m3_wasm3_acos);
+        addFunction("_asin", "F(F)", &m3_wasm3_asin);
+        addFunction("_atan", "F(F)", &m3_wasm3_atan);
+        addFunction("_atan2", "F(FF)", &m3_wasm3_atan2);
+        addFunction("_cos", "F(F)", &m3_wasm3_cos);
+        addFunction("_exp", "F(F)", &m3_wasm3_exp);
+        addFunction("_fmod", "F(FF)", &m3_wasm3_fmod);
+        addFunction("_log", "F(F)", &m3_wasm3_log);
+        addFunction("_log10", "F(F)", &m3_wasm3_log10);
+        addFunction("_pow", "F(FF)", &m3_wasm3_pow);
+        addFunction("_remainder", "F(FF)", &m3_wasm3_remainder);
+        addFunction("_round", "F(F)", &m3_wasm3_round);
+        addFunction("_sin", "F(F)", &m3_wasm3_sin);
+        addFunction("_tan", "F(F)", &m3_wasm3_tan);
+        addFunction("_acosh", "F(F)", &m3_wasm3_acosh);
+        addFunction("_asinh", "F(F)", &m3_wasm3_asinh);
+        addFunction("_atanh", "F(F)", &m3_wasm3_atanh);
+        addFunction("_cosh", "F(F)", &m3_wasm3_cosh);
+        addFunction("_sinh", "F(F)", &m3_wasm3_sinh);
+        addFunction("_tanh", "F(F)", &m3_wasm3_tanh);
+    } else {
+        addFunction("_abs", "i(i)", &m3_wasm3_abs);
+        addFunction("_acosf", "f(f)", &m3_wasm3_acosf);
+        addFunction("_asinf", "f(f)", &m3_wasm3_asinf);
+        addFunction("_atanf", "f(f)", &m3_wasm3_atanf);
+        addFunction("_atan2f", "f(ff)", &m3_wasm3_atan2f);
+        addFunction("_cosf", "f(f)", &m3_wasm3_cosf);
+        addFunction("_expf", "f(f)", &m3_wasm3_expf);
+        addFunction("_fmodf", "f(ff)", &m3_wasm3_fmodf);
+        addFunction("_logf", "f(f)", &m3_wasm3_logf);
+        addFunction("_log10f", "f(f)", &m3_wasm3_log10f);
+        addFunction("_powf", "f(ff)", &m3_wasm3_powf);
+        addFunction("_remainderf", "f(ff)", &m3_wasm3_remainderf);
+        addFunction("_roundf", "f(f)", &m3_wasm3_roundf);
+        addFunction("_sinf", "f(f)", &m3_wasm3_sinf);
+        addFunction("_tanf", "f(f)", &m3_wasm3_tanf);
+        addFunction("_acoshf", "f(f)", &m3_wasm3_acoshf);
+        addFunction("_asinhf", "f(f)", &m3_wasm3_asinhf);
+        addFunction("_atanhf", "f(f)", &m3_wasm3_atanhf);
+        addFunction("_coshf", "f(f)", &m3_wasm3_coshf);
+        addFunction("_sinhf", "f(f)", &m3_wasm3_sinhf);
+        addFunction("_tanhf", "f(f)", &m3_wasm3_tanhf);
+    }
     
     std::cout << "Libfaust version: " << fFactory->fDecoder->getLibVersion() << std::endl;
     std::cout << "Compilation options: " << fFactory->fDecoder->getCompileOptions() << std::endl;
