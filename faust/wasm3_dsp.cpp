@@ -492,7 +492,7 @@ wasm3_dsp::wasm3_dsp(wasm3_dsp_factory* factory)
             // Setup output buffer indexes for wasm side
             HEAP32[i] = audio_heap_outputs + (buffer_size * sample_size * i);
             // Setup output buffer pointers for runtime side
-            fOutputs[i] =  HEAPF32 + (buffer_size * i);
+            fOutputs[i] = HEAPF32 + (buffer_size * i);
         }
     }
 

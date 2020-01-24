@@ -33,6 +33,7 @@
 
 #include "faust/audio/jack-dsp.h"
 #include "faust/dsp/poly-dsp.h"
+#include "faust/dsp/dsp-adapter.h"
 #include "faust/gui/httpdUI.h"
 #include "faust/gui/GTKUI.h"
 #include "faust/gui/FUI.h"
@@ -50,10 +51,15 @@ static bool endWith(const string& str, const string& suffix)
     return (i != string::npos) && (i == (str.length() - suffix.length()));
 }
 
+static bool isPowerOf2(unsigned int n)
+{
+    return n == 1 || (n & (n-1)) == 0;
+}
+
 int main(int argc, char* argv[])
 {
     if (argc == 1 || isopt(argv, "-h") || isopt(argv, "-help") || !endWith(argv[argc-1], ".wasm")) {
-        cout << "faustwas3 [-nvoices <num>] [-midi] foo.wasm" << endl;
+        cout << "faustwas3 [-nvoices <num>] [-midi] [-ds <factor>] foo.wasm" << endl;
         cout << "Open the http://127.0.0.1:5510 URL to get an http based control\n";
         exit(EXIT_FAILURE);
     }
@@ -73,6 +79,7 @@ int main(int argc, char* argv[])
     
     bool is_midi = isopt(argv, "-midi");
     int nvoices = lopt(argv, "-nvoices", -1);
+    int ds = lopt(argv, "-ds", 1);
     
     wasm3_dsp_factory factory(argv[argc - 1]);
     DSP = factory.createDSPInstance();
@@ -80,6 +87,15 @@ int main(int argc, char* argv[])
     if (nvoices > 0) {
         cout << "Starting polyphonic mode 'nvoices' : " << nvoices << endl;
         DSP = dsp_poly = new mydsp_poly(DSP, nvoices, true, true);
+    }
+    
+    if (ds > 1) {
+        if (!isPowerOf2(ds)) {
+            cout << "Downsampling factor must be a power of two !!\n";
+            exit(1);
+        }
+        cout << "Downsampling by : " << ds << endl;
+        DSP = new dsp_down_sampler(DSP, ds);
     }
     
     jackaudio_midi audio;

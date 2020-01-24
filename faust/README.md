@@ -3,12 +3,13 @@
 
 The **faustwasm3** tool loads a Faust generated wasm module and runs it using the wasm3 interpreter, JACK for the audio, and GTK for the GUI.
 
-`faustwasm3 [-nvoices <num>] [-midi] foo.wasm`
+`faustwasm3 [-nvoices <num>] [-midi] [-ds <factor>] foo.wasm`
 
 Here are the available options:
 
-- `-nvoices N to start the DSP in polyphonic mode with N voices`
+- `-nvoices <num> to start the DSP in polyphonic mode with <num> voices`
 - `-midi to activate MIDI control`
+- `-ds <factor> to downsample the DSP by a factor <ds> (must be a power-of-two)`
 
 To test, clone the repository, and in the 'faust' folder:
 
