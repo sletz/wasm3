@@ -610,13 +610,23 @@ d_m3Op  (End)
 
 
 d_m3OpDecl  (GetGlobal)
-d_m3OpDecl  (SetGlobal_i)
+d_m3OpDecl  (SetGlobal_i32)
+d_m3OpDecl  (SetGlobal_i64)
 
 
-d_m3Op  (SetGlobal_s)
+d_m3Op  (SetGlobal_s32)
 {
-    i64 * global = immediate (i64 *);
-    * global = slot (i64);
+    u32 * global = immediate (u32 *);
+    * global = slot (u32);
+
+    return nextOp ();
+}
+
+
+d_m3Op  (SetGlobal_s64)
+{
+    u64 * global = immediate (u64 *);
+    * global = slot (u64);
 
     return nextOp ();
 }
@@ -641,20 +651,10 @@ d_m3Op  (SetGlobal_f64)
 
 
 d_m3OpDecl (CopySlot_32)
+d_m3OpDecl (PreserveCopySlot_32)
+
 d_m3OpDecl (CopySlot_64)
-
-
-d_m3Op (PreserveCopySlot_64)
-{
-    u64 * dest      = slot_ptr (u64);
-    u64 * src       = slot_ptr (u64);
-    u64 * preserve  = slot_ptr (u64);
-
-    * preserve = * dest;
-    * dest = * src;
-
-    return nextOp ();
-}
+d_m3OpDecl (PreserveCopySlot_64)
 
 #define d_m3SetRegisterSetSlotDecl(TYPE)    \
                                             \
