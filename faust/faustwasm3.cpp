@@ -89,13 +89,25 @@ int main(int argc, char* argv[])
         DSP = dsp_poly = new mydsp_poly(DSP, nvoices, true, true);
     }
     
-    if (ds > 1) {
-        if (!isPowerOf2(ds)) {
-            cout << "Downsampling factor must be a power of two !!\n";
-            exit(1);
-        }
+    
+    if (isPowerOf2(ds) && ds <= 16) {
         cout << "Downsampling by : " << ds << endl;
-        DSP = new dsp_down_sampler(DSP, ds);
+        // Template based specialization (for LowPass filters cofficients)
+        /*
+        if (ds == 2) DSP = new dsp_down_sampler<2, float>(DSP);
+        else if (ds == 4) DSP = new dsp_down_sampler<4, float>(DSP);
+        else if (ds == 8) DSP = new dsp_down_sampler<8, float>(DSP);
+        else if (ds == 16) DSP = new dsp_down_sampler<16, float>(DSP);
+        */
+        
+        if (ds == 2) DSP = new dsp_up_sampler<2, float>(DSP);
+        else if (ds == 4) DSP = new dsp_up_sampler<4, float>(DSP);
+        else if (ds == 8) DSP = new dsp_up_sampler<8, float>(DSP);
+        else if (ds == 16) DSP = new dsp_up_sampler<16, float>(DSP);
+        
+    } else {
+        cerr << "Downsampling factor must be a power of two and <= 16\n";
+        exit(1);
     }
     
     jackaudio_midi audio;
