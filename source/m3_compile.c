@@ -1771,9 +1771,9 @@ const M3OpInfo c_operations [] =
     M3OP( "i32.div_u",          -1, i_32,   d_binOpList (u32, Divide)               ),          // 0x6e
     M3OP( "i32.rem_s",          -1, i_32,   d_binOpList (i32, Remainder)            ),          // 0x6f
     M3OP( "i32.rem_u",          -1, i_32,   d_binOpList (u32, Remainder)            ),          // 0x70
-    M3OP( "i32.and",            -1, i_32,   d_commutativeBinOpList (u64, And)       ),          // 0x71
-    M3OP( "i32.or",             -1, i_32,   d_commutativeBinOpList (u64, Or)        ),          // 0x72
-    M3OP( "i32.xor",            -1, i_32,   d_commutativeBinOpList (u64, Xor)       ),          // 0x73
+    M3OP( "i32.and",            -1, i_32,   d_commutativeBinOpList (u32, And)       ),          // 0x71
+    M3OP( "i32.or",             -1, i_32,   d_commutativeBinOpList (u32, Or)        ),          // 0x72
+    M3OP( "i32.xor",            -1, i_32,   d_commutativeBinOpList (u32, Xor)       ),          // 0x73
     M3OP( "i32.shl",            -1, i_32,   d_binOpList (u32, ShiftLeft)            ),          // 0x74
     M3OP( "i32.shr_s",          -1, i_32,   d_binOpList (i32, ShiftRight)           ),          // 0x75
     M3OP( "i32.shr_u",          -1, i_32,   d_binOpList (u32, ShiftRight)           ),          // 0x76
@@ -1865,13 +1865,6 @@ const M3OpInfo c_operations [] =
     M3OP( "f32.reinterpret/i32", 0, f_32,   d_convertOpList (f32_Reinterpret_i32),  Compile_Convert ),  // 0xbe
     M3OP( "f64.reinterpret/i64", 0, f_64,   d_convertOpList (f64_Reinterpret_i64),  Compile_Convert ),  // 0xbf
 
-// instr ::= ...
-//         | 0xC0                  =>  i32.extend8_s
-//         | 0xC1                  =>  i32.extend16_s
-//         | 0xC2                  =>  i64.extend8_s
-//         | 0xC3                  =>  i64.extend16_s
-//         | 0xC4                  =>  i64.extend32_s
-//
     M3OP( "i32.extend8_s",       0,  i_32,   d_unaryOpList (i32, Extend8_s)          ),                 // 0xc0
     M3OP( "i32.extend16_s",      0,  i_32,   d_unaryOpList (i32, Extend16_s)         ),                 // 0xc1
     M3OP( "i64.extend8_s",       0,  i_64,   d_unaryOpList (i64, Extend8_s)          ),                 // 0xc2
@@ -1882,8 +1875,7 @@ const M3OpInfo c_operations [] =
 #   define d_m3DebugOp(OP) M3OP (#OP, 0, none, { op_##OP })
 #   define d_m3DebugTypedOp(OP) M3OP (#OP, 0, none, { op_##OP##_i32, op_##OP##_i64, op_##OP##_f32, op_##OP##_f64, })
 
-    d_m3DebugOp (Const),            d_m3DebugOp (Entry),                d_m3DebugOp (Compile),
-    d_m3DebugOp (Bridge),           d_m3DebugOp (End),
+    d_m3DebugOp (Const),            d_m3DebugOp (Entry),                d_m3DebugOp (Compile),      d_m3DebugOp (End),
 
     d_m3DebugOp (ContinueLoop),     d_m3DebugOp (ContinueLoopIf),
 
@@ -1905,9 +1897,9 @@ const M3OpInfo c_operations [] =
     
     d_m3DebugTypedOp (SetRegister), d_m3DebugTypedOp (SetSlot),     d_m3DebugTypedOp (PreserveSetSlot),
 
+    M3OP( "termination for find_operation_info ()", 0, c_m3Type_void )
+    
 # endif
-
-    M3OP( "termination",           0,  c_m3Type_void )                     // termination for find_operation_info ()
 };
 
 
@@ -1925,10 +1917,7 @@ M3Result  Compile_BlockStatements  (IM3Compilation o)
         if (not compiler)
             compiler = Compile_Operator;
 
-        if (compiler)
-            result = (* compiler) (o, opcode);
-        else
-            result = m3Err_noCompiler;
+        result = (* compiler) (o, opcode);
 
         o->previousOpcode = opcode;                             //                      m3logif (stack, dump_type_stack (o))
 

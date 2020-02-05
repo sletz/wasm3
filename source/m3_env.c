@@ -175,6 +175,8 @@ void  ReleaseRuntime  (IM3Runtime i_runtime)
     FreeCompilationPatches (& i_runtime->compilation);
 
     m3Free (i_runtime->stack);
+
+    m3Free (i_runtime->memory.mallocated);
 }
 
 
@@ -422,7 +424,7 @@ _           (ReadLEB_u32 (& numElements, & bytes, end));
 
             if (endElement > offset) // TODO: check this, endElement depends on offset
             {
-                io_module->table0 = (IM3Function*)m3RellocArray (io_module->table0, IM3Function, endElement, io_module->table0Size);
+                io_module->table0 = (IM3Function*)m3ReallocArray (io_module->table0, IM3Function, endElement, io_module->table0Size);
 
                 if (io_module->table0)
                 {
@@ -455,21 +457,15 @@ M3Result  InitStartFunc  (IM3Module io_module)
 {
     M3Result result = m3Err_none;
 
-    if (io_module->startFunction >= 0) {
-        if ((u32)io_module->startFunction >= io_module->numFunctions) {
-            return "start function index out of bounds";
-        }
-        IM3Function function = &io_module->functions [io_module->startFunction];
-        if (not function) {
-            return "start function not found";
-        }
+    if (io_module->startFunction >= 0)
+	{
+		IM3Function function = & io_module->functions [io_module->startFunction];
 
         if (not function->compiled)
         {
 _           (Compile_Function (function));
-            if (result)
-                function = NULL;
         }
+		
 _       (m3_Call(function));
     }
 
@@ -594,9 +590,9 @@ M3Result  m3_CallWithArgs  (IM3Function i_function, uint32_t i_argc, const char 
             case c_m3Type_f32:  *(f32*)(s) = atof(str);  break;
             case c_m3Type_f64:  *(f64*)(s) = atof(str);  break;
 #else
-            case c_m3Type_i32:  *(u32*)(s) = strtoul(str, NULL, 10);  break;
-            case c_m3Type_i64:  *(u64*)(s) = strtoull(str, NULL, 10); break;
+            case c_m3Type_i32:
             case c_m3Type_f32:  *(u32*)(s) = strtoul(str, NULL, 10);  break;
+            case c_m3Type_i64:
             case c_m3Type_f64:  *(u64*)(s) = strtoull(str, NULL, 10); break;
 #endif
             default: _throw("unknown argument type");
