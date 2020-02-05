@@ -59,7 +59,7 @@ static bool isPowerOf2(unsigned int n)
 int main(int argc, char* argv[])
 {
     if (argc == 1 || isopt(argv, "-h") || isopt(argv, "-help") || !endWith(argv[argc-1], ".wasm")) {
-        cout << "faustwas3 [-nvoices <num>] [-midi] [-ds <factor>] foo.wasm" << endl;
+        cout << "faustwas3 [-nvoices <num>] [-midi] [-down-sample <factor>] [-up-sample <factor>] [-filter <type>] foo.wasm" << endl;
         cout << "Open the http://127.0.0.1:5510 URL to get an http based control\n";
         exit(EXIT_FAILURE);
     }
@@ -79,7 +79,9 @@ int main(int argc, char* argv[])
     
     bool is_midi = isopt(argv, "-midi");
     int nvoices = lopt(argv, "-nvoices", -1);
-    int ds = lopt(argv, "-ds", 1);
+    int ds = lopt(argv, "-down-sample", 1);
+    int up = lopt(argv, "-up-sample", 1);
+    int filter = lopt(argv, "-filter", 1);
     
     wasm3_dsp_factory factory(argv[argc - 1]);
     DSP = factory.createDSPInstance();
@@ -89,25 +91,74 @@ int main(int argc, char* argv[])
         DSP = dsp_poly = new mydsp_poly(DSP, nvoices, true, true);
     }
     
-    
-    if (isPowerOf2(ds) && ds <= 16) {
-        cout << "Downsampling by : " << ds << endl;
-        // Template based specialization (for LowPass filters cofficients)
-        /*
-        if (ds == 2) DSP = new dsp_down_sampler<2, float>(DSP);
-        else if (ds == 4) DSP = new dsp_down_sampler<4, float>(DSP);
-        else if (ds == 8) DSP = new dsp_down_sampler<8, float>(DSP);
-        else if (ds == 16) DSP = new dsp_down_sampler<16, float>(DSP);
-        */
-        
-        if (ds == 2) DSP = new dsp_up_sampler<2, float>(DSP);
-        else if (ds == 4) DSP = new dsp_up_sampler<4, float>(DSP);
-        else if (ds == 8) DSP = new dsp_up_sampler<8, float>(DSP);
-        else if (ds == 16) DSP = new dsp_up_sampler<16, float>(DSP);
-        
-    } else {
-        cerr << "Downsampling factor must be a power of two and <= 16\n";
-        exit(1);
+    if (ds != 1) {
+        switch (filter) {
+            case 1:
+                if (ds == 2) DSP = new dsp_down_sampler<LowPass3<Double<45,100>, 2, float>>(DSP);
+                else if (ds == 4) DSP = new dsp_down_sampler<LowPass3<Double<45,100>, 4, float>>(DSP);
+                else if (ds == 8) DSP = new dsp_down_sampler<LowPass3<Double<45,100>, 8, float>>(DSP);
+                else if (ds == 16) DSP = new dsp_down_sampler<LowPass3<Double<45,100>, 16, float>>(DSP);
+                else cerr << "Downsampling factor must be a power of two and <= 16\n";
+                break;
+            case 2:
+                if (ds == 2) DSP = new dsp_down_sampler<LowPass4<Double<45,100>, 2, float>>(DSP);
+                else if (ds == 4) DSP = new dsp_down_sampler<LowPass4<Double<45,100>, 4, float>>(DSP);
+                else if (ds == 8) DSP = new dsp_down_sampler<LowPass4<Double<45,100>, 8, float>>(DSP);
+                else if (ds == 16) DSP = new dsp_down_sampler<LowPass4<Double<45,100>, 16, float>>(DSP);
+                else cerr << "Downsampling factor must be a power of two and <= 16\n";
+                break;
+            case 3:
+                if (ds == 2) DSP = new dsp_down_sampler<LowPass3e<Double<45,100>, 2, float>>(DSP);
+                else if (ds == 4) DSP = new dsp_down_sampler<LowPass3e<Double<45,100>, 4, float>>(DSP);
+                else if (ds == 8) DSP = new dsp_down_sampler<LowPass3e<Double<45,100>, 8, float>>(DSP);
+                else if (ds == 16) DSP = new dsp_down_sampler<LowPass3e<Double<45,100>, 16, float>>(DSP);
+                else cerr << "Downsampling factor must be a power of two and <= 16\n";
+                break;
+            case 4:
+                if (ds == 2) DSP = new dsp_down_sampler<LowPass6e<Double<45,100>, 2, float>>(DSP);
+                else if (ds == 4) DSP = new dsp_down_sampler<LowPass6e<Double<45,100>, 4, float>>(DSP);
+                else if (ds == 8) DSP = new dsp_down_sampler<LowPass6e<Double<45,100>, 8, float>>(DSP);
+                else if (ds == 16) DSP = new dsp_down_sampler<LowPass6e<Double<45,100>, 16, float>>(DSP);
+                else cerr << "Downsampling factor must be a power of two and <= 16\n";
+                break;
+            default:
+                cerr << "Incorrect filter type : " << filter << endl;
+                break;
+        }
+    } else if (up != 1) {
+        switch (filter) {
+            case 1:
+                if (up == 2) DSP = new dsp_up_sampler<LowPass3<Double<45,100>, 2, float>>(DSP);
+                else if (up == 4) DSP = new dsp_up_sampler<LowPass3<Double<45,100>, 4, float>>(DSP);
+                else if (up == 8) DSP = new dsp_up_sampler<LowPass3<Double<45,100>, 8, float>>(DSP);
+                else if (up == 16) DSP = new dsp_up_sampler<LowPass3<Double<45,100>, 16, float>>(DSP);
+                else cerr << "Upsampling factor must be a power of two and <= 16\n";
+                break;
+            case 2:
+                if (up == 2) DSP = new dsp_up_sampler<LowPass4<Double<45,100>, 2, float>>(DSP);
+                else if (up == 4) DSP = new dsp_up_sampler<LowPass4<Double<45,100>, 4, float>>(DSP);
+                else if (up == 8) DSP = new dsp_up_sampler<LowPass4<Double<45,100>, 8, float>>(DSP);
+                else if (up == 16) DSP = new dsp_up_sampler<LowPass4<Double<45,100>, 16, float>>(DSP);
+                else cerr << "Upsampling factor must be a power of two and <= 16\n";
+                break;
+            case 3:
+                if (up == 2) DSP = new dsp_up_sampler<LowPass3e<Double<45,100>, 2, float>>(DSP);
+                else if (up == 4) DSP = new dsp_up_sampler<LowPass3e<Double<45,100>, 4, float>>(DSP);
+                else if (up == 8) DSP = new dsp_up_sampler<LowPass3e<Double<45,100>, 8, float>>(DSP);
+                else if (up == 16) DSP = new dsp_up_sampler<LowPass3e<Double<45,100>, 16, float>>(DSP);
+                else cerr << "Upsampling factor must be a power of two and <= 16\n";
+                break;
+            case 4:
+                if (up == 2) DSP = new dsp_up_sampler<LowPass6e<Double<45,100>, 2, float>>(DSP);
+                else if (up == 4) DSP = new dsp_up_sampler<LowPass6e<Double<45,100>, 4, float>>(DSP);
+                else if (up == 8) DSP = new dsp_up_sampler<LowPass6e<Double<45,100>, 8, float>>(DSP);
+                else if (up == 16) DSP = new dsp_up_sampler<LowPass6e<Double<45,100>, 16, float>>(DSP);
+                else cerr << "Upsampling factor must be a power of two and <= 16\n";
+                break;
+            default:
+                cerr << "Incorrect filter type : " << filter << endl;
+                break;
+        }
     }
     
     jackaudio_midi audio;
