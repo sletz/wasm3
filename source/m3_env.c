@@ -296,7 +296,7 @@ M3Result  ResizeMemory  (IM3Runtime io_runtime, u32 i_numPages)
 
         // Limit the amount of memory that gets allocated
         if (io_runtime->memoryLimit) {
-            numPageBytes = min(numPageBytes, io_runtime->memoryLimit);
+            numPageBytes = M3_MIN(numPageBytes, io_runtime->memoryLimit);
         }
 
         size_t numBytes = numPageBytes + sizeof (M3MemoryHeader);
@@ -458,14 +458,14 @@ M3Result  InitStartFunc  (IM3Module io_module)
     M3Result result = m3Err_none;
 
     if (io_module->startFunction >= 0)
-	{
-		IM3Function function = & io_module->functions [io_module->startFunction];
+    {
+	    IM3Function function = & io_module->functions [io_module->startFunction];
 
         if (not function->compiled)
         {
 _           (Compile_Function (function));
         }
-		
+	    
 _       (m3_Call(function));
     }
 
