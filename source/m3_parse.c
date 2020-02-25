@@ -67,10 +67,11 @@ _           (ReadLEB_u32 (& ft->numArgs, & i_bytes, i_end));
             {
                 for (u32 i = 0; i < ft->numArgs; ++i)
                 {
-                    i8 argType;
-_                   (ReadLEB_i7 (& argType, & i_bytes, i_end));
-
-                    ft->argTypes [i] = -argType;
+                    i8 wasmType;
+                    u8 argType;
+_                   (ReadLEB_i7 (& wasmType, & i_bytes, i_end));
+_                   (NormalizeType (& argType, wasmType));
+                    ft->argTypes [i] = argType;
                 }
             }
             else _throw (m3Err_typeListOverflow);
@@ -235,7 +236,7 @@ M3Result  ParseSection_Start  (IM3Module io_module, bytes_t i_bytes, cbytes_t i_
     M3Result result = m3Err_none;
 
     u32 startFuncIndex;
-_   (ReadLEB_u32 (& startFuncIndex, & i_bytes, i_end));                               m3log (parse, "** Start Function: %d", startFunc);
+_   (ReadLEB_u32 (& startFuncIndex, & i_bytes, i_end));                               m3log (parse, "** Start Function: %d", startFuncIndex);
 
     if (startFuncIndex < io_module->numFunctions)
     {
@@ -310,22 +311,22 @@ _       (ReadLEB_u32 (& size, & i_bytes, i_end));
             {
                 const u8 * start = ptr;
 
-                u32 numLocals;
-_               (ReadLEB_u32 (& numLocals, & ptr, i_end));                          m3log (parse, "  - func size: %d; locals: %d", size, numLocals);
+                u32 numLocalBlocks;
+_               (ReadLEB_u32 (& numLocalBlocks, & ptr, i_end));                                      m3log (parse, "  - func size: %d; local blocks: %d", size, numLocalBlocks);
 
-                u32 numLocalVars = 0;
+                u32 numLocals = 0;
 
-                for (u32 l = 0; l < numLocals; ++l)
+                for (u32 l = 0; l < numLocalBlocks; ++l)
                 {
                     u32 varCount;
-                    i8 varType;
-                    u8 normalizedType;
+                    i8 wasmType;
+                    u8 normalType;
 
 _                   (ReadLEB_u32 (& varCount, & ptr, i_end));
-_                   (ReadLEB_i7 (& varType, & ptr, i_end));
-_                   (NormalizeType (& normalizedType, varType));
+_                   (ReadLEB_i7 (& wasmType, & ptr, i_end));
+_                   (NormalizeType (& normalType, wasmType));
 
-                    numLocalVars += varCount;                                       m3log (parse, "    - %d locals; type: '%s'", varCount, c_waTypes [-varType]);
+                    numLocals += varCount;                                                      m3log (parse, "    - %d locals; type: '%s'", varCount, c_waTypes [normalType]);
                 }
 
                 IM3Function func = Module_GetFunction (io_module, f + io_module->numImports);
@@ -333,7 +334,7 @@ _                   (NormalizeType (& normalizedType, varType));
                 func->module = io_module;
                 func->wasm = start;
                 func->wasmEnd = i_bytes;
-                func->numLocals = numLocalVars;
+                func->numLocals = numLocals;
             }
             else _throw (m3Err_wasmSectionOverrun);
         }

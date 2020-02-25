@@ -41,7 +41,7 @@ void  m3_PrintRuntimeInfo  (IM3Runtime i_runtime)
 {
     printf ("\n-- m3 runtime -------------------------------------------------\n");
 
-    printf (" stack-size: %zu   \n\n", i_runtime->numStackSlots * sizeof (m3reg_t));
+    printf (" stack-size: %zu   \n\n", i_runtime->numStackSlots * sizeof (m3slot_t));
 
     u32 moduleIndex = 0;
     ForEachModule (i_runtime, (ModuleVisitor) v_PrintEnvModuleInfo, & moduleIndex);
@@ -92,7 +92,7 @@ size_t  SPrintArg  (char * o_string, size_t i_n, m3stack_t i_sp, u8 i_type)
     else if (i_type == c_m3Type_f64)
         len = snprintf (o_string, i_n, "%lf", * (f64 *) i_sp);
 
-    len = M3_MAX (0, len);
+    len = m3_max (0, len);
 
     return len;
 }
@@ -105,7 +105,7 @@ cstr_t  SPrintFunctionArgList  (IM3Function i_function, m3stack_t i_sp)
     char * s = string;
     ccstr_t e = string + sizeof(string) - 1;
 
-    s += M3_MAX (0, snprintf (s, e-s, "("));
+    s += m3_max (0, snprintf (s, e-s, "("));
 
     IM3FuncType funcType = i_function->funcType;
     if (funcType)
@@ -117,17 +117,17 @@ cstr_t  SPrintFunctionArgList  (IM3Function i_function, m3stack_t i_sp)
         {
             u8 type = types [i];
 
-            s += M3_MAX (0, snprintf (s, e-s, "%s: ", c_waTypes [type]));
+            s += m3_max (0, snprintf (s, e-s, "%s: ", c_waTypes [type]));
 
             s += SPrintArg (s, e-s, i_sp + i, type);
 
             if (i != numArgs - 1)
-                s += M3_MAX (0, snprintf (s, e-s, ", "));
+                s += m3_max (0, snprintf (s, e-s, ", "));
         }
     }
     else printf ("null signature");
 
-    s += M3_MAX (0, snprintf (s, e-s, ")"));
+    s += m3_max (0, snprintf (s, e-s, ")"));
 
     return string;
 }
@@ -135,9 +135,10 @@ cstr_t  SPrintFunctionArgList  (IM3Function i_function, m3stack_t i_sp)
 static
 OpInfo find_operation_info  (IM3Operation i_operation)
 {
-    OpInfo opInfo;
-    M3_INIT(opInfo);
+    OpInfo opInfo = { NULL, 0 };
 
+    if (i_operation)
+    {
     for (u32 i = 0; i <= 0xff; ++i)
     {
         IM3OpInfo oi = & c_operations [i];
@@ -155,6 +156,7 @@ OpInfo find_operation_info  (IM3Operation i_operation)
             }
         }
         else break;
+    }
     }
 
     return opInfo;
@@ -362,7 +364,6 @@ void  dump_type_stack  (IM3Compilation o)
 
     for (u32 r = 0; r < 2; ++r)
         d_m3Assert (regAllocated [r] == 0);         // reg allocation & stack out of sync
-
 }
 
 

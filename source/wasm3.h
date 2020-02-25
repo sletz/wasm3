@@ -114,7 +114,6 @@ d_m3ErrorConst  (wasmSectionOverrun,            "section overrun while parsing W
 d_m3ErrorConst  (invalidTypeId,                 "unknown value_type")
 d_m3ErrorConst  (tooManyMemorySections,         "Wasm MVP can only define one memory per module")
 
-
 // link errors
 d_m3ErrorConst  (moduleAlreadyLinked,           "attempting to bind module to multiple runtimes")
 d_m3ErrorConst  (functionLookupFailed,          "function lookup failed")
@@ -123,7 +122,7 @@ d_m3ErrorConst  (functionImportMissing,         "missing imported function")
 // compilation errors
 d_m3ErrorConst  (noCompiler,                    "no compiler found for opcode")
 d_m3ErrorConst  (unknownOpcode,                 "unknown opcode")
-d_m3ErrorConst  (functionStackOverflow,         "compiling function overrun its stack height limit")
+d_m3ErrorConst  (functionStackOverflow,         "compiling function overran its stack height limit")
 d_m3ErrorConst  (functionStackUnderrun,         "compiling function underran the stack")
 d_m3ErrorConst  (mallocFailedCodePage,          "memory allocation failed when acquiring a new M3 code page")
 d_m3ErrorConst  (settingImmutableGlobal,        "attempting to set an immutable global")
@@ -134,6 +133,7 @@ d_m3ErrorConst  (missingCompiledCode,           "function is missing compiled m3
 d_m3ErrorConst  (wasmMemoryOverflow,            "runtime ran out of memory")
 d_m3ErrorConst  (globalMemoryNotAllocated,      "global memory is missing from a module")
 d_m3ErrorConst  (globaIndexOutOfBounds,         "global index is too large")
+d_m3ErrorConst  (argumentCountMismatch,         "argument count mismatch")
 
 // traps
 d_m3ErrorConst  (trapOutOfBoundsMemoryAccess,   "[trap] out of bounds memory access")

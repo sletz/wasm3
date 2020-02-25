@@ -48,7 +48,8 @@ typedef const u8 *              bytes_t;
 typedef const u8 * const        cbytes_t;
 
 typedef i64                     m3reg_t;
-typedef u64 *                   m3stack_t;
+typedef u64                     m3slot_t;
+typedef m3slot_t *              m3stack_t;
 
 typedef
 const void * const  cvptr_t;
@@ -154,10 +155,8 @@ M3CodePageHeader;
 
 #define d_m3MemPageSize                     65536
 
-#define d_m3Reg0SlotAlias                   d_m3MaxFunctionStackHeight + 1
-#define d_m3Fp0SlotAlias                    d_m3MaxFunctionStackHeight + 2
-
-#define d_m3MaxNumFunctionConstants         60
+#define d_m3Reg0SlotAlias                   30000
+#define d_m3Fp0SlotAlias                    30001
 
 #define d_m3MaxSaneUtf8Length               2000
 

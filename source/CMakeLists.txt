@@ -2,6 +2,7 @@ set(srcs
     "m3_api_libc.c"
     "m3_api_meta_wasi.c"
     "m3_api_wasi.c"
+    "m3_api_tracer.c"
     "m3_bind.c"
     "m3_code.c"
     "m3_compile.c"
@@ -41,5 +42,15 @@ else()
         # Clang specific flags here
     else()
         # GCC specific flags here
+    endif()
+endif()
+
+option(BUILD_WASI_SUPPORT "Build with WASI support" OFF)
+
+if (BUILD_WASI_SUPPORT)
+    if (WASIENV)
+        target_compile_definitions(m3 PUBLIC d_m3HasMetaWASI)
+    elseif (NOT EMSCRIPTEN)
+        target_compile_definitions(m3 PUBLIC d_m3HasWASI)
     endif()
 endif()

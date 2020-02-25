@@ -113,7 +113,7 @@ IM3Runtime  m3_NewRuntime  (IM3Environment i_environment, u32 i_stackSizeInBytes
 
         if (runtime->stack)
         {
-            runtime->numStackSlots = i_stackSizeInBytes / sizeof (m3reg_t);         m3log (runtime, "new stack: %p", runtime->stack);
+            runtime->numStackSlots = i_stackSizeInBytes / sizeof (m3slot_t);         m3log (runtime, "new stack: %p", runtime->stack);
         }
         else m3Free (runtime);
     }
@@ -298,7 +298,7 @@ M3Result  ResizeMemory  (IM3Runtime io_runtime, u32 i_numPages)
 
         // Limit the amount of memory that gets allocated
         if (io_runtime->memoryLimit) {
-            numPageBytes = M3_MIN(numPageBytes, io_runtime->memoryLimit);
+            numPageBytes = m3_min (numPageBytes, io_runtime->memoryLimit);
         }
 
         size_t numBytes = numPageBytes + sizeof (M3MemoryHeader);
@@ -319,9 +319,9 @@ M3Result  ResizeMemory  (IM3Runtime io_runtime, u32 i_numPages)
             memory->mallocated->length =  numPageBytes;
             memory->mallocated->runtime = io_runtime;
 
-            memory->mallocated->maxStack = (m3reg_t *) io_runtime->stack + io_runtime->numStackSlots;
+            memory->mallocated->maxStack = (m3slot_t *) io_runtime->stack + io_runtime->numStackSlots;
 
-            m3log (runtime, "resized old: %p; mem: %p; length: %z; pages: %d", oldMallocated, memory->mallocated, memory->mallocated->length, memory->numPages);
+            m3log (runtime, "resized old: %p; mem: %p; length: %zu; pages: %d", oldMallocated, memory->mallocated, memory->mallocated->length, memory->numPages);
         }
         else result = m3Err_mallocFailed;
     }
@@ -565,24 +565,23 @@ M3Result  m3_CallWithArgs  (IM3Function i_function, uint32_t i_argc, const char 
         IM3Runtime runtime = module->runtime;
         runtime->argc = i_argc;
         runtime->argv = i_argv;
-        if (strcmp (i_function->name, "_start") == 0) // WASI
+        if (i_function->name and strcmp (i_function->name, "_start") == 0) // WASI
             i_argc = 0;
 
         IM3FuncType ftype = i_function->funcType;
 
-        m3stack_t stack = (m3stack_t)(runtime->stack);
+        m3stack_t stack = (m3stack_t) runtime->stack;
 
         m3logif (runtime, PrintFuncTypeSignature (ftype));
 
-        if (i_argc != ftype->numArgs) {
-            _throw("arguments count mismatch");
-        }
+        if (i_argc != ftype->numArgs)
+            _throw (m3Err_argumentCountMismatch);
 
         // The format is currently not user-friendly by default,
         // as this is used in spec tests
         for (u32 i = 0; i < ftype->numArgs; ++i)
         {
-            m3stack_t s = &stack[i];
+            m3slot_t * s = & stack[i];
             ccstr_t str = i_argv[i];
 
             switch (ftype->argTypes[i]) {
@@ -830,9 +829,6 @@ void m3_ResetErrorInfo (IM3Runtime i_runtime)
 {
     M3_INIT(i_runtime->error);
     i_runtime->error.message = "";
-#if d_m3VerboseLogs
-    i_runtime->error_message[0] = '\0';
-#endif
 }
 
 
