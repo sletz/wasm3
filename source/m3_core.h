@@ -48,7 +48,13 @@ typedef const u8 *              bytes_t;
 typedef const u8 * const        cbytes_t;
 
 typedef i64                     m3reg_t;
+
+# if d_m3Use32BitSlots
+typedef u32                     m3slot_t;
+# else
 typedef u64                     m3slot_t;
+# endif
+
 typedef m3slot_t *              m3stack_t;
 
 typedef
@@ -151,7 +157,7 @@ typedef struct M3CodePageHeader
 M3CodePageHeader;
 
 
-#define d_m3CodePageFreeLinesThreshold      4       // max is probably: select _sss
+#define d_m3CodePageFreeLinesThreshold      4+2       // max is: select _sss & CallIndirect + 2 for bridge
 
 #define d_m3MemPageSize                     65536
 
@@ -168,10 +174,6 @@ M3CodePageHeader;
 static const char * const c_waTypes []          = { "nil", "i32", "i64", "f32", "f64", "void", "void *" };
 static const char * const c_waCompactTypes []   = { "0", "i", "I", "f", "F", "v", "*" };
 
-
-#define m3Alloc(OPTR, STRUCT, NUM)              m3Malloc ((void **) OPTR, sizeof (STRUCT) * (NUM))
-#define m3ReallocArray(PTR, STRUCT, NEW, OLD)   m3Realloc ((PTR), sizeof (STRUCT) * (NEW), sizeof (STRUCT) * (OLD))
-#define m3Free(P)                               { m3Free_impl((void*)(P)); P = NULL; }
 
 # if d_m3VerboseLogs
 
@@ -202,9 +204,16 @@ size_t      m3StackGetMax           ();
 void        m3Abort                 (const char* message);
 void        m3NotImplemented        (void);
 
-M3Result    m3Malloc                (void ** o_ptr, size_t i_size);
-void *      m3Realloc               (void * i_ptr, size_t i_newSize, size_t i_oldSize);
-void        m3Free_impl             (void * o_ptr);
+M3Result    m3_Malloc                (void ** o_ptr, size_t i_size);
+M3Result    m3_Realloc               (void ** io_ptr, size_t i_newSize, size_t i_oldSize);
+void        m3_Free                  (void ** io_ptr);
+M3Result    m3_CopyMem               (void ** o_to, cbytes_t i_from, size_t i_size);
+
+#define m3Alloc(OPTR, STRUCT, NUM)                  m3_Malloc ((void **) OPTR, sizeof (STRUCT) * (NUM))
+#define m3ReallocArray(PTR, STRUCT, NEW, OLD)       m3_Realloc ((void **) (PTR), sizeof (STRUCT) * (NEW), sizeof (STRUCT) * (OLD))
+#define m3Reallocate(_ptr, _newSize, _oldSize)      m3_Realloc ((void **) _ptr, _newSize, _oldSize)
+#define m3Free(P)                                   m3_Free ((void **)(& P));
+#define m3CopyMem(_to, _from, _size)                m3_CopyMem ((void **) _to, _from, _size)
 
 M3Result    NormalizeType           (u8 * o_type, i8 i_convolutedWasmType);
 
@@ -228,7 +237,7 @@ M3Result    ReadLEB_i32             (i32 * o_value, bytes_t * io_bytes, cbytes_t
 M3Result    ReadLEB_i64             (i64 * o_value, bytes_t * io_bytes, cbytes_t i_end);
 M3Result    Read_utf8               (cstr_t * o_utf8, bytes_t * io_bytes, cbytes_t i_end);
 
-size_t      SPrintArg               (char * o_string, size_t i_n, m3stack_t i_sp, u8 i_type);
+size_t      SPrintArg               (char * o_string, size_t i_n, u64 * i_sp, u8 i_type);
 
 void        ReportError             (IM3Runtime io_runtime, IM3Module i_module, IM3Function i_function, ccstr_t i_errorMessage, ccstr_t i_file, u32 i_lineNum);
 

@@ -77,7 +77,7 @@ void  PrintFuncTypeSignature  (IM3FuncType i_funcType)
 }
 
 
-size_t  SPrintArg  (char * o_string, size_t i_n, m3stack_t i_sp, u8 i_type)
+size_t  SPrintArg  (char * o_string, size_t i_n, u64 * i_sp, u8 i_type)
 {
     int len = 0;
 
@@ -107,6 +107,8 @@ cstr_t  SPrintFunctionArgList  (IM3Function i_function, m3stack_t i_sp)
 
     s += m3_max (0, snprintf (s, e-s, "("));
 
+    u64 * argSp = (u64 *) i_sp;
+    
     IM3FuncType funcType = i_function->funcType;
     if (funcType)
     {
@@ -119,7 +121,7 @@ cstr_t  SPrintFunctionArgList  (IM3Function i_function, m3stack_t i_sp)
 
             s += m3_max (0, snprintf (s, e-s, "%s: ", c_waTypes [type]));
 
-            s += SPrintArg (s, e-s, i_sp + i, type);
+            s += SPrintArg (s, e-s, argSp + i, type);
 
             if (i != numArgs - 1)
                 s += m3_max (0, snprintf (s, e-s, ", "));
@@ -245,13 +247,18 @@ void  DecodeOperation  (char * o_string, u8 i_opcode, IM3Operation i_operation, 
 
     switch (i_opcode)
     {
-        d_m3Decode (0xc0,                  Const)
-        d_m3Decode (0xc1,                  Entry)
+//        d_m3Decode (0xc0,                  Const)
+//        d_m3Decode (0xc1,                  Entry)
         d_m3Decode (c_waOp_call,           Call)
         d_m3Decode (c_waOp_branch,         Branch)
         d_m3Decode (c_waOp_branchTable,    BranchTable)
         d_m3Decode (0x39,                  f64_Store)
     }
+
+    #undef d_m3Decode
+    #define d_m3Decode(FUNC) if (i_operation == op_##FUNC) Decode_##FUNC (o_string, i_opcode, i_operation, i_opInfo, o_pc);
+
+    d_m3Decode (Entry)
 }
 
 
@@ -302,7 +309,9 @@ void  dump_type_stack  (IM3Compilation o)
      applied until this compilation stage is finished
      -- constants are not statically represented in the type stack (like args & constants) since they don't have/need
      write counts
+     
      -- the number shown for static args and locals (value in wasmStack [i]) represents the write count for the variable
+     
      -- (does Wasm ever write to an arg? I dunno/don't remember.)
      -- the number for the dynamic stack values represents the slot number.
      -- if the slot index points to arg, local or constant it's denoted with a lowercase 'a', 'l' or 'c'
@@ -316,24 +325,10 @@ void  dump_type_stack  (IM3Compilation o)
     printf ("                                                        ");
     printf ("%s %s    ", regAllocated [0] ? "(r0)" : "    ", regAllocated [1] ? "(fp0)" : "     ");
 
-    u32 numArgs = GetFunctionNumArgs (o->function);
-
-    for (u32 i = 0; i < o->stackIndex; ++i)
+    for (u32 i = o->firstDynamicStackIndex; i < o->stackIndex; ++i)
     {
-        if (i == o->firstConstSlotIndex)
-            printf (" | ");                     // divide the static & dynamic portion of the stack
-
-        //        printf (" %d:%s.", i, c_waTypes [o->typeStack [i]]);
         printf (" %s", c_waCompactTypes [o->typeStack [i]]);
-        if (i < o->firstConstSlotIndex)
-        {
-            u16 writeCount = o->wasmStack [i];
 
-            printf ((i < numArgs) ? "A" : "L");     // arg / local
-            printf ("%d", (i32) writeCount);        // writeCount
-        }
-        else
-        {
             u16 slot = o->wasmStack [i];
 
             if (IsRegisterLocation (slot))
@@ -345,19 +340,18 @@ void  dump_type_stack  (IM3Compilation o)
             }
             else
             {
-                if (slot < o->firstSlotIndex)
+            if (slot < o->firstDynamicSlotIndex)
                 {
                     if (slot >= o->firstConstSlotIndex)
                         printf ("c");
-                    else if (slot >= numArgs)
-                        printf ("l");
+                else if (slot >= o->function->numArgSlots)
+                    printf ("L");
                     else
                         printf ("a");
                 }
 
                 printf ("%d", (i32) slot);  // slot
             }
-        }
 
         printf (" ");
     }

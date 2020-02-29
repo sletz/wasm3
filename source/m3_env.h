@@ -17,15 +17,17 @@ d_m3BeginExternC
 
 typedef struct M3FuncType
 {
-    u32                     numArgs;
-    u8                      argTypes                [d_m3MaxNumFunctionArgs];
-    u8                      returnType;
+    u8 *        argTypes;
+    u32         numArgs;
+    u8          returnType;
 }
 M3FuncType;
 
 typedef M3FuncType *        IM3FuncType;
 
-void        PrintFuncTypeSignature          (IM3FuncType i_funcType);
+void    FuncType_Free                   (IM3FuncType i_type);
+void    PrintFuncTypeSignature          (IM3FuncType i_funcType);
+bool    AreFuncTypesEqual               (const IM3FuncType i_typeA, const IM3FuncType i_typeB);
 
 
 //---------------------------------------------------------------------------------------------------------------------------------
@@ -37,6 +39,7 @@ typedef struct M3Function
 
     bytes_t                 wasm;
     bytes_t                 wasmEnd;
+    bool                    ownsWasmCode;
 
     cstr_t                  name;
 
@@ -49,12 +52,13 @@ typedef struct M3Function
 
     u16                     maxStackSlots;
 
+    u16                     numArgSlots;
+    
     u16                     numLocals;          // not including args
+    u16                     numLocalBytes;
 
     u16                     numConstantBytes;
     void *                  constants;
-
-//    bool                    callNeedsRuntime;
 }
 M3Function;
 
@@ -134,7 +138,7 @@ typedef M3Global *          IM3Global;
 
 
 //---------------------------------------------------------------------------------------------------------------------------------
-typedef struct M3Module                 // TODO add env owner? also discriminates stack/heap
+typedef struct M3Module
 {
     struct M3Runtime *      runtime;
 
@@ -167,8 +171,8 @@ typedef struct M3Module                 // TODO add env owner? also discriminate
 
     M3MemoryInfo            memoryInfo;
     bool                    memoryImported;
-
-//  m3reg_t *               globalMemory;
+    
+    bool                    hasWasmCodeCopy;
 
     struct M3Module *       next;
 }
@@ -248,7 +252,7 @@ void *                      ForEachModule               (IM3Runtime i_runtime, M
 void *                      v_FindFunction              (IM3Module i_module, const char * const i_name);
 
 IM3CodePage                 AcquireCodePage             (IM3Runtime io_runtime);
-IM3CodePage                 AcquireCodePageWithCapacity (IM3Runtime io_runtime, u32 i_slotCount);
+IM3CodePage                 AcquireCodePageWithCapacity (IM3Runtime io_runtime, u32 i_lineCount);
 void                        ReleaseCodePage             (IM3Runtime io_runtime, IM3CodePage i_codePage);
 
 M3Result                    m3Error                     (M3Result i_result, IM3Runtime i_runtime, IM3Module i_module, IM3Function i_function, const char * const i_file, u32 i_lineNum, const char * const i_errorMessage, ...);

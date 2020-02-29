@@ -12,6 +12,30 @@
 #include "m3_exec.h"
 #include "m3_exception.h"
 
+
+void FuncType_Free (IM3FuncType i_type)
+{
+    m3Free (i_type->argTypes);
+}
+
+
+bool  AreFuncTypesEqual  (const IM3FuncType i_typeA, const IM3FuncType i_typeB)
+{
+    if (i_typeA->returnType == i_typeB->returnType)
+    {
+        if (i_typeA->numArgs == i_typeB->numArgs)
+        {
+            if (i_typeA->argTypes and i_typeB->argTypes)
+            {
+                return (memcmp (i_typeA->argTypes, i_typeB->argTypes, i_typeA->numArgs) == 0);
+            }
+        }
+    }
+    
+    return false;
+}
+
+
 cstr_t  GetFunctionName  (IM3Function i_function)
 {
     if (i_function->import.fieldUtf8)
@@ -109,7 +133,7 @@ IM3Runtime  m3_NewRuntime  (IM3Environment i_environment, u32 i_stackSizeInBytes
 
         runtime->environment = i_environment;
 
-        m3Malloc (& runtime->stack, i_stackSizeInBytes);
+        m3Alloc (& runtime->stack, u8, i_stackSizeInBytes);
 
         if (runtime->stack)
         {
@@ -196,14 +220,14 @@ M3Result  EvaluateExpression  (IM3Module i_module, void * o_expressed, u8 i_type
 {
     M3Result result = m3Err_none;
 
-    u64 stack [d_m3MaxFunctionStackHeight]; // stack on the stack
+    m3slot_t stack [d_m3MaxFunctionSlots]; // stack on the stack
 
     // create a temporary runtime context
     M3Runtime runtime;
     M3_INIT (runtime);
 
     runtime.environment = i_module->runtime->environment;
-    runtime.numStackSlots = d_m3MaxFunctionStackHeight;
+    runtime.numStackSlots = d_m3MaxFunctionSlots;
     runtime.stack = & stack;
 
     IM3Runtime savedRuntime = i_module->runtime;
@@ -234,11 +258,11 @@ M3Result  EvaluateExpression  (IM3Module i_module, void * o_expressed, u8 i_type
             {
                 if (SizeOfType (i_type) == sizeof (u32))
                 {
-                    * (u32 *) o_expressed = *stack & 0xFFFFFFFF;
+                    * (u32 *) o_expressed = * ((u32 *) stack);
                 }
                 else if (SizeOfType (i_type) == sizeof (u64))
                 {
-                    * (u64 *) o_expressed = *stack;
+                    * (u64 *) o_expressed = * ((u64 *) stack);
                 }
             }
         }
@@ -307,27 +331,24 @@ M3Result  ResizeMemory  (IM3Runtime io_runtime, u32 i_numPages)
         if (numPreviousBytes)
             numPreviousBytes += sizeof (M3MemoryHeader);
 
-        memory->mallocated = (M3MemoryHeader *) m3Realloc (memory->mallocated, numBytes, numPreviousBytes);
+_       (m3Reallocate (& memory->mallocated, numBytes, numPreviousBytes));
 
-        if (memory->mallocated)
-        {
-#if d_m3LogRuntime
-            u8 * oldMallocated = memory->mallocated;
-#endif
-            memory->numPages = numPagesToAlloc;
+#       if d_m3LogRuntime
+        u8 * oldMallocated = memory->mallocated;
+#       endif
+        
+        memory->numPages = numPagesToAlloc;
 
-            memory->mallocated->length =  numPageBytes;
-            memory->mallocated->runtime = io_runtime;
+        memory->mallocated->length =  numPageBytes;
+        memory->mallocated->runtime = io_runtime;
 
-            memory->mallocated->maxStack = (m3slot_t *) io_runtime->stack + io_runtime->numStackSlots;
+        memory->mallocated->maxStack = (m3slot_t *) io_runtime->stack + io_runtime->numStackSlots;
 
-            m3log (runtime, "resized old: %p; mem: %p; length: %zu; pages: %d", oldMallocated, memory->mallocated, memory->mallocated->length, memory->numPages);
-        }
-        else result = m3Err_mallocFailed;
+        m3log (runtime, "resized old: %p; mem: %p; length: %zu; pages: %d", oldMallocated, memory->mallocated, memory->mallocated->length, memory->numPages);
     }
     else result = m3Err_wasmMemoryOverflow;
 
-    return result;
+    _catch: return result;
 }
 
 
@@ -426,26 +447,22 @@ _           (ReadLEB_u32 (& numElements, & bytes, end));
 
             if (endElement > offset) // TODO: check this, endElement depends on offset
             {
-                io_module->table0 = (IM3Function*)m3ReallocArray (io_module->table0, IM3Function, endElement, io_module->table0Size);
+_               (m3ReallocArray (& io_module->table0, IM3Function, endElement, io_module->table0Size));
 
-                if (io_module->table0)
+                io_module->table0Size = endElement;
+
+                for (u32 e = 0; e < numElements; ++e)
                 {
-                    io_module->table0Size = endElement;
-
-                    for (u32 e = 0; e < numElements; ++e)
-                    {
-                        u32 functionIndex;
+                    u32 functionIndex;
 _                       (ReadLEB_u32 (& functionIndex, & bytes, end));
 
-                        if (functionIndex < io_module->numFunctions)
-                        {
-                            IM3Function function = & io_module->functions [functionIndex];      d_m3Assert (function); //printf ("table: %s\n", function->name);
-                            io_module->table0 [e + offset] = function;
-                        }
-                        else _throw ("function index out of range");
+                    if (functionIndex < io_module->numFunctions)
+                    {
+                        IM3Function function = & io_module->functions [functionIndex];      d_m3Assert (function); //printf ("table: %s\n", function->name);
+                        io_module->table0 [e + offset] = function;
                     }
+                    else _throw ("function index out of range");
                 }
-                else _throw (m3Err_mallocFailed);
             }
             else _throw ("table overflow");
         }
@@ -568,20 +585,19 @@ M3Result  m3_CallWithArgs  (IM3Function i_function, uint32_t i_argc, const char 
         if (i_function->name and strcmp (i_function->name, "_start") == 0) // WASI
             i_argc = 0;
 
-        IM3FuncType ftype = i_function->funcType;
-
-        m3stack_t stack = (m3stack_t) runtime->stack;
-
-        m3logif (runtime, PrintFuncTypeSignature (ftype));
+        IM3FuncType ftype = i_function->funcType;                               m3logif (runtime, PrintFuncTypeSignature (ftype));
 
         if (i_argc != ftype->numArgs)
             _throw (m3Err_argumentCountMismatch);
+
+        // args are always 64-bit aligned
+        u64 * stack = (u64 *) runtime->stack;
 
         // The format is currently not user-friendly by default,
         // as this is used in spec tests
         for (u32 i = 0; i < ftype->numArgs; ++i)
         {
-            m3slot_t * s = & stack[i];
+            u64 * s = & stack [i];
             ccstr_t str = i_argv[i];
 
             switch (ftype->argTypes[i]) {
@@ -601,7 +617,7 @@ M3Result  m3_CallWithArgs  (IM3Function i_function, uint32_t i_argc, const char 
         }
 
         m3StackCheckInit();
-_       ((M3Result)Call (i_function->compiled, stack, runtime->memory.mallocated, d_m3OpDefaultArgs));
+_       ((M3Result) Call (i_function->compiled, (m3stack_t) stack, runtime->memory.mallocated, d_m3OpDefaultArgs));
 
 #if d_m3LogOutput
         switch (ftype->returnType) {

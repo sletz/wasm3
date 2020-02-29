@@ -10,18 +10,16 @@
 
 #include "m3_config_platforms.h"
 
-# ifndef d_m3MaxNumFunctionArgs
-#   define d_m3MaxNumFunctionArgs               31
-# endif
-
 # ifndef d_m3CodePageAlignSize
 #   define d_m3CodePageAlignSize                4096
 # endif
+
 # ifndef d_m3MaxFunctionStackHeight
 #   define d_m3MaxFunctionStackHeight           2000
 # endif
 
-#define d_m3MaxNumFunctionConstants             60
+#define d_m3MaxFunctionSlots                    4000                // twice d_m3MaxFunctionStackHeight
+#define d_m3MaxConstantTableSize                120
 
 # ifndef d_m3LogOutput
 #   define d_m3LogOutput                        1
@@ -40,9 +38,13 @@
 #   define d_m3FixedHeapAlign                   16
 # endif
 
-# ifndef d_m3EnableOptimizations
-#   define d_m3EnableOptimizations              0
+# ifndef d_m3Use32BitSlots
+#   define d_m3Use32BitSlots                    1
 # endif
+
+//# ifndef d_m3EnableOptimizations
+//#   define d_m3EnableOptimizations              0
+//# endif
 
 // logging --------------------------------------------------------------------
 

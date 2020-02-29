@@ -40,7 +40,7 @@ static u8* fixedHeapLast = NULL;
 #   define HEAP_ALIGN_PTR(P)
 #endif
 
-M3Result  m3Malloc  (void ** o_ptr, size_t i_size)
+M3Result  m3_Malloc  (void ** o_ptr, size_t i_size)
 {
     u8 * ptr = fixedHeapPtr;
 
@@ -63,7 +63,7 @@ M3Result  m3Malloc  (void ** o_ptr, size_t i_size)
     return m3Err_none;
 }
 
-void        m3Free_impl             (void * o_ptr)
+void        m3_Free              (void ** io_ptr)
 {
     if (!o_ptr) return;
 
@@ -75,9 +75,11 @@ void        m3Free_impl             (void * o_ptr)
     } else {
         //printf("== free %p [failed]\n", o_ptr);
     }
+    
+    * io_ptr = NULL;
 }
 
-void *  m3Realloc  (void * i_ptr, size_t i_newSize, size_t i_oldSize)
+void *  m3_Realloc  (void * i_ptr, size_t i_newSize, size_t i_oldSize)
 {
     //printf("== realloc %p => %d\n", i_ptr, i_newSize);
 
@@ -91,7 +93,7 @@ void *  m3Realloc  (void * i_ptr, size_t i_newSize, size_t i_oldSize)
         return ptr;
     }
 
-    m3Malloc(&ptr, i_newSize);
+    m3_Malloc(&ptr, i_newSize);
     if (!ptr) return NULL;
 
     if (i_ptr) {
@@ -104,53 +106,66 @@ void *  m3Realloc  (void * i_ptr, size_t i_newSize, size_t i_oldSize)
 
 #else
 
-M3Result  m3Malloc  (void ** o_ptr, size_t i_size)
+M3Result  m3_Malloc  (void ** o_ptr, size_t i_size)
 {
     M3Result result = m3Err_none;
 
-    void * ptr = malloc (i_size);
-    if (ptr)
-    {
-        memset (ptr, 0x0, i_size);
-    }
-    else result = m3Err_mallocFailed;
+    void * ptr = calloc (i_size, 1);
+    
+    if (not ptr)
+        result = m3Err_mallocFailed;
 
     * o_ptr = ptr;
-    //printf("== alloc %d => %p\n", i_size, ptr);
+//    printf("== alloc %d => %p\n", (u32) i_size, ptr);
 
     return result;
 }
 
-void  m3Free_impl  (void * o_ptr)
+void  m3_Free  (void ** io_ptr)
 {
-    if (!o_ptr) return;
-
-    //printf("== free %p\n", o_ptr);
-    free(o_ptr);
+//    if (i_ptr) printf("== free %p\n", i_ptr);
+    free (* io_ptr);
+    * io_ptr = NULL;
 }
 
-void *  m3Realloc  (void * i_ptr, size_t i_newSize, size_t i_oldSize)
+M3Result  m3_Realloc  (void ** io_ptr, size_t i_newSize, size_t i_oldSize)
 {
-    //printf("== realloc %p => %d\n", i_ptr, i_newSize);
-    void * ptr = i_ptr;
-
+    M3Result result = m3Err_none;
+    
     if (i_newSize != i_oldSize)
     {
-        ptr = realloc (i_ptr, i_newSize);
+        void * newPtr = realloc (* io_ptr, i_newSize);
 
-        if (ptr)
+        if (newPtr)
         {
-            if (i_ptr)
-            {
-                if (i_newSize > i_oldSize)
-                    memset ((u8*) ptr + i_oldSize, 0x0, i_newSize - i_oldSize);
-            }
-            else memset (ptr, 0x0, i_newSize);
+            if (i_newSize > i_oldSize)
+                memset ((u8 *) newPtr + i_oldSize, 0x0, i_newSize - i_oldSize);
+            
+            * io_ptr = newPtr;
         }
+        else result = m3Err_mallocFailed;
+        
+//        printf("== realloc %p -> %p => %d\n", i_ptr, ptr, (u32) i_newSize);
     }
 
-    return ptr;
+    return result;
 }
+
+
+M3Result  m3_CopyMem  (void ** o_to, cbytes_t i_from, size_t i_size)
+{
+    void * to = malloc (i_size);
+    
+    if (to)
+    {
+        memcpy (to, i_from, i_size);
+        * o_to = to;
+        
+        return m3Err_none;
+    }
+    else return m3Err_mallocFailed;
+}
+
 
 #endif
 
@@ -463,7 +478,7 @@ M3Result  Read_utf8  (cstr_t * o_utf8, bytes_t * io_bytes, cbytes_t i_end)
             if (end <= i_end)
             {
                 char * utf8;
-                result = m3Malloc ((void **) & utf8, utf8Length + 1);
+                result = m3_Malloc ((void **) & utf8, utf8Length + 1);
 
                 if (not result)
                 {

@@ -5,10 +5,39 @@
 //  Copyright © 2019 Steven Massey. All rights reserved.
 //
 
-
 #include "m3_env.h"
+#include "m3_exception.h"
 
-static void Module_FreeFunctions(IM3Module i_module);
+
+void Module_FreeFunctions (IM3Module i_module)
+{
+    for (u32 i = 0; i < i_module->numFunctions; ++i)
+    {
+        IM3Function func = &i_module->functions [i];
+        m3Free (func->constants);
+        
+        if (func->name != func->import.fieldUtf8)
+        {
+            m3Free (func->name);
+        }
+        
+        FreeImportInfo (& func->import);
+        
+        if (func->ownsWasmCode)
+            m3Free (func->wasm);
+    }
+}
+
+
+void Module_FreeFuncTypes (IM3Module i_module)
+{
+    for (u32 i = 0; i < i_module->numFuncTypes; ++i)
+    {
+        IM3FuncType ftype = & i_module->funcTypes [i];
+        FuncType_Free (ftype);
+    }
+}
+
 
 void  m3_FreeModule  (IM3Module i_module)
 {
@@ -18,6 +47,7 @@ void  m3_FreeModule  (IM3Module i_module)
                i_module->name, i_module->numFunctions, i_module->numDataSegments);
 
         Module_FreeFunctions (i_module);
+        Module_FreeFuncTypes (i_module);
 
         m3Free (i_module->functions);
         m3Free (i_module->imports);
@@ -32,42 +62,24 @@ void  m3_FreeModule  (IM3Module i_module)
     }
 }
 
-static void Module_FreeFunctions(IM3Module i_module)
-{
-    for (u32 i = 0; i < i_module->numFunctions; ++i)
-    {
-        IM3Function func = &i_module->functions[i];
-        m3Free (func->constants);
-        if (func->name != func->import.fieldUtf8)
-        {
-            m3Free (func->name);
-        }
-
-        FreeImportInfo (&func->import);
-    }
-}
 
 M3Result  Module_AddGlobal  (IM3Module io_module, IM3Global * o_global, u8 i_type, bool i_mutable, bool i_isImported)
 {
     M3Result result = m3Err_none;
 
     u32 index = io_module->numGlobals++;
-    io_module->globals = (M3Global *) m3ReallocArray (io_module->globals, M3Global, io_module->numGlobals, index);
+_   (m3ReallocArray (& io_module->globals, M3Global, io_module->numGlobals, index));
 
-    if (io_module->globals)
-    {
-        M3Global * global = & io_module->globals [index];
+    M3Global * global = & io_module->globals [index];
 
-        global->type = i_type;
-        global->imported = i_isImported;
-        global->isMutable = i_mutable;
+    global->type = i_type;
+    global->imported = i_isImported;
+    global->isMutable = i_mutable;
 
-        if (o_global)
-            * o_global = global;
-    }
-    else result = m3Err_mallocFailed;
+    if (o_global)
+        * o_global = global;
 
-    return result;
+    _catch: return result;
 }
 
 
@@ -76,30 +88,26 @@ M3Result  Module_AddFunction  (IM3Module io_module, u32 i_typeIndex, IM3ImportIn
     M3Result result = m3Err_none;
 
     u32 index = io_module->numFunctions++;
-    io_module->functions = (M3Function*)m3ReallocArray (io_module->functions, M3Function, io_module->numFunctions, index);
+_   (m3ReallocArray (& io_module->functions, M3Function, io_module->numFunctions, index));
 
-    if (io_module->functions)
+    if (i_typeIndex < io_module->numFuncTypes)
     {
-        if (i_typeIndex < io_module->numFuncTypes)
+        IM3FuncType ft = & io_module->funcTypes [i_typeIndex];
+
+        IM3Function func = Module_GetFunction (io_module, index);
+        func->funcType = ft;
+
+        if (i_importInfo)
         {
-            IM3FuncType ft = & io_module->funcTypes [i_typeIndex];
-
-            IM3Function func = Module_GetFunction (io_module, index);
-            func->funcType = ft;
-
-            if (i_importInfo)
-            {
-                func->import = * i_importInfo;
-                func->name = i_importInfo->fieldUtf8;
-            }
-
-            //          m3log (module, "   added function: %3d; sig: %d", index, i_typeIndex);
+            func->import = * i_importInfo;
+            func->name = i_importInfo->fieldUtf8;
         }
-        else result = "unknown type sig index";
-    }
-    else result = m3Err_mallocFailed;
 
-    return result;
+        //          m3log (module, "   added function: %3d; sig: %d", index, i_typeIndex);
+    }
+    else result = "type sig index out of bounds";
+
+     _catch: return result;
 }
 
 
