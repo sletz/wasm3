@@ -35,8 +35,7 @@
 #include <unistd.h>
 #include <stdint.h>
 
-#include "faust/dsp/dsp.h"
-#include "faust/gui/JSONUIDecoder.h"
+#include "faust/dsp/wasm-dsp-imp.h"
 
 #include "../source/wasm3.h"
 #include "../source/m3_env.h"
@@ -48,17 +47,13 @@
 
 typedef const void* (ModuleFun) (IM3Runtime runtime, uint64_t* _sp, void* _mem);
 
-struct wasm3_dsp_factory : public dsp_factory {
+struct wasm3_dsp_factory : public wasm_dsp_factory_imp {
     
     const uint8_t* fBytes;
     int fLen;
     
-    JSONUITemplatedDecoder* fDecoder;
-    
-    wasm3_dsp_factory(const std::string& filename)
+    wasm3_dsp_factory(const std::string& filename):wasm_dsp_factory_imp()
     {
-        fDecoder = nullptr;
-        
         std::ifstream is(filename, std::ifstream::binary);
         is.seekg(0, is.end);
         fLen = is.tellg();
@@ -69,47 +64,21 @@ struct wasm3_dsp_factory : public dsp_factory {
     
     virtual ~wasm3_dsp_factory()
     {
-        delete fDecoder;
         delete[] fBytes;
     }
     
-    std::string getName() { return fDecoder->getName(); }
-    
-    std::string getSHAKey() { return ""; }
-    
-    std::string getDSPCode() { return ""; }
-    
-    std::string getCompileOptions() { return fDecoder->getCompileOptions(); }
-    
-    std::vector<std::string> getLibraryList() { return fDecoder->getLibraryList(); }
-    
-    std::vector<std::string> getIncludePathnames() { return fDecoder->getIncludePathnames(); }
-    
     dsp* createDSPInstance();
-    
-    void setMemoryManager(dsp_memory_manager* manager) {}
-    
-    dsp_memory_manager* getMemoryManager() { return nullptr; }
-    
+
 };
 
-class wasm3_dsp : public dsp {
+class wasm3_dsp : public wasm_dsp_imp {
     
     private:
-    
-        wasm3_dsp_factory* fFactory;
     
         IM3Environment fEnv;
         IM3Module fModule;
         IM3Runtime fInstance;
         IM3Function fCompute;
-        char* fMemory;
-    
-        int fWasmInputs;        // Index in wasm memory
-        int fWasmOutputs;       // Index in wasm memory
-        
-        FAUSTFLOAT** fInputs;   // Wasm memory mapped to pointers
-        FAUSTFLOAT** fOutputs;  // Wasm memory mapped to pointers
     
         void addFunction(const char* name, const char* type, ModuleFun fun)
         {
@@ -154,12 +123,7 @@ class wasm3_dsp : public dsp {
             uint64_t value = *(uint64_t*)(fInstance->stack);
             return value;
         }
-        
-        virtual void buildUserInterface(UI* ui_interface)
-        {
-            fFactory->fDecoder->buildUserInterface(ui_interface, fMemory);
-        }
-        
+    
         virtual int getSampleRate()
         {
             IM3Function f;
@@ -223,16 +187,11 @@ class wasm3_dsp : public dsp {
             result = m3_CallWithArgs(f, 1, i_argv);
         }
        
-        virtual dsp* clone()
+        virtual wasm3_dsp* clone()
         {
-            return new wasm3_dsp(fFactory);
+            return new wasm3_dsp(dynamic_cast<wasm3_dsp_factory*>(fFactory));
         }
-       
-        virtual void metadata(Meta* m)
-        {
-            fFactory->fDecoder->metadata(m);
-        }
-        
+    
         virtual void compute(int count, FAUSTFLOAT** inputs, FAUSTFLOAT** outputs)
         {
             // Copy audio inputs

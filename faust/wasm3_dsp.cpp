@@ -377,8 +377,7 @@ dsp* wasm3_dsp_factory::createDSPInstance()
     return new wasm3_dsp(this);
 }
 
-wasm3_dsp::wasm3_dsp(wasm3_dsp_factory* factory)
-:fFactory(factory)
+wasm3_dsp::wasm3_dsp(wasm3_dsp_factory* factory):wasm_dsp_imp(factory)
 {
     fEnv = m3_NewEnvironment();
     if (!fEnv) FATAL("m3_NewEnvironment failed");
@@ -394,14 +393,10 @@ wasm3_dsp::wasm3_dsp(wasm3_dsp_factory* factory)
     
     uint32_t memorySize;
     fMemory = (char*)m3_GetMemory(fInstance, &memorySize, 0);
-   
-    if (!factory->fDecoder) {
-        string json = string(fMemory);
-        cout << "JSON " << json << endl;
-        factory->fDecoder = createJSONUIDecoder(json);
-    }
     
-    if (factory->fDecoder->hasCompileOption("-double")) {
+    initDecoder();
+    
+    if (fFactory->fDecoder->hasCompileOption("-double")) {
         addFunction("_abs", "i(i)", &m3_wasm3_abs);
         addFunction("_acos", "F(F)", &m3_wasm3_acos);
         addFunction("_asin", "F(F)", &m3_wasm3_asin);
@@ -447,55 +442,6 @@ wasm3_dsp::wasm3_dsp(wasm3_dsp_factory* factory)
         addFunction("_tanhf", "f(f)", &m3_wasm3_tanhf);
     }
     
-    std::cout << "Libfaust version: " << fFactory->fDecoder->getLibVersion() << std::endl;
-    std::cout << "Compilation options: " << fFactory->fDecoder->getCompileOptions() << std::endl;
-    
-    int ptr_size = sizeof(FAUSTFLOAT*);
-    int sample_size = sizeof(FAUSTFLOAT);
-    int buffer_size = 4096; // Max
-    
-    fInputs = new FAUSTFLOAT*[fFactory->fDecoder->getNumInputs()];
-    fOutputs = new FAUSTFLOAT*[fFactory->fDecoder->getNumOutputs()];
-    
-    // DSP is placed first with index 0. Audio buffer start at the end of DSP.
-    int audio_heap_ptr = fFactory->fDecoder->getDSPSize();
-    
-    // Setup pointers offset
-    int audio_heap_ptr_inputs = audio_heap_ptr;
-    int audio_heap_ptr_outputs = audio_heap_ptr_inputs + (fFactory->fDecoder->getNumInputs() * ptr_size);
-    
-    // Setup buffer offset
-    int audio_heap_inputs = audio_heap_ptr_outputs + (fFactory->fDecoder->getNumOutputs() * ptr_size);
-    int audio_heap_outputs = audio_heap_inputs + (fFactory->fDecoder->getNumInputs() * buffer_size * sample_size);
-    
-    if (fFactory->fDecoder->getNumInputs() > 0) {
-        
-        fWasmInputs = audio_heap_ptr_inputs;
-        int* HEAP32 = reinterpret_cast<int*>(fMemory + audio_heap_ptr_inputs);
-        FAUSTFLOAT* HEAPF32 = reinterpret_cast<FAUSTFLOAT*>(fMemory + audio_heap_inputs);
-        
-        for (int i = 0; i < fFactory->fDecoder->getNumInputs(); i++) {
-            // Setup input buffer indexes for wasm side
-            HEAP32[i] = audio_heap_inputs + (buffer_size * sample_size * i);
-            // Setup input buffer pointers for runtime side
-            fInputs[i] = HEAPF32 + (buffer_size * i);
-        }
-    }
-    
-    if (fFactory->fDecoder->getNumOutputs() > 0) {
-        
-        fWasmOutputs = audio_heap_ptr_outputs;
-        int* HEAP32 = reinterpret_cast<int*>(fMemory + audio_heap_ptr_outputs);
-        FAUSTFLOAT* HEAPF32 = reinterpret_cast<FAUSTFLOAT*>(fMemory + audio_heap_outputs);
-        
-        for (int i = 0; i < fFactory->fDecoder->getNumOutputs(); i++) {
-            // Setup output buffer indexes for wasm side
-            HEAP32[i] = audio_heap_outputs + (buffer_size * sample_size * i);
-            // Setup output buffer pointers for runtime side
-            fOutputs[i] = HEAPF32 + (buffer_size * i);
-        }
-    }
-
     result = m3_FindFunction(&fCompute, fInstance, "compute");
     if (result) FATAL("m3_FindFunction: %s", result);
 }
