@@ -15,7 +15,7 @@
 typedef struct OpInfo
 {
     IM3OpInfo   info;
-    u8          opcode;
+    m3opcode_t  opcode;
 }
 OpInfo;
 
@@ -72,13 +72,13 @@ cstr_t  SPrintFuncTypeSignature  (IM3FuncType i_funcType)
     {
         if (i != 0)
             strcat (string, ", ");
-        
+
         strcat (string, GetTypeName (types [i]));
     }
 
     strcat (string, ") -> ");
     strcat (string, GetTypeName (i_funcType->returnType));
-    
+
     return string;
 }
 
@@ -114,7 +114,7 @@ cstr_t  SPrintFunctionArgList  (IM3Function i_function, m3stack_t i_sp)
     s += m3_max (0, snprintf (s, e-s, "("));
 
     u64 * argSp = (u64 *) i_sp;
-    
+
     IM3FuncType funcType = i_function->funcType;
     if (funcType)
     {
@@ -145,11 +145,12 @@ OpInfo find_operation_info  (IM3Operation i_operation)
 {
     OpInfo opInfo = { NULL, 0 };
 
-    if (i_operation)
-    {
+    if (!i_operation) return opInfo;
+
+    // TODO: find also extended opcodes
     for (u32 i = 0; i <= 0xff; ++i)
     {
-        IM3OpInfo oi = & c_operations [i];
+        IM3OpInfo oi = GetOpInfo(i);
 
         if (oi->type != c_m3Type_void)
         {
@@ -164,7 +165,6 @@ OpInfo find_operation_info  (IM3Operation i_operation)
             }
         }
         else break;
-    }
     }
 
     return opInfo;
@@ -315,9 +315,9 @@ void  dump_type_stack  (IM3Compilation o)
      applied until this compilation stage is finished
      -- constants are not statically represented in the type stack (like args & constants) since they don't have/need
      write counts
-     
+
      -- the number shown for static args and locals (value in wasmStack [i]) represents the write count for the variable
-     
+
      -- (does Wasm ever write to an arg? I dunno/don't remember.)
      -- the number for the dynamic stack values represents the slot number.
      -- if the slot index points to arg, local or constant it's denoted with a lowercase 'a', 'l' or 'c'
@@ -335,29 +335,29 @@ void  dump_type_stack  (IM3Compilation o)
     {
         printf (" %s", c_waCompactTypes [o->typeStack [i]]);
 
-            u16 slot = o->wasmStack [i];
+        u16 slot = o->wasmStack [i];
 
-            if (IsRegisterLocation (slot))
-            {
-                bool isFp = IsFpRegisterLocation (slot);
-                printf ("%s", isFp ? "f0" : "r0");
+        if (IsRegisterLocation (slot))
+        {
+            bool isFp = IsFpRegisterLocation (slot);
+            printf ("%s", isFp ? "f0" : "r0");
 
-                regAllocated [isFp]--;
-            }
-            else
-            {
+            regAllocated [isFp]--;
+        }
+        else
+        {
             if (slot < o->firstDynamicSlotIndex)
-                {
-                    if (slot >= o->firstConstSlotIndex)
-                        printf ("c");
+            {
+                if (slot >= o->firstConstSlotIndex)
+                    printf ("c");
                 else if (slot >= o->function->numArgSlots)
                     printf ("L");
-                    else
-                        printf ("a");
-                }
-
-                printf ("%d", (i32) slot);  // slot
+                else
+                    printf ("a");
             }
+
+            printf ("%d", (i32) slot);  // slot
+        }
 
         printf (" ");
     }

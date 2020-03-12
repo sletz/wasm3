@@ -238,8 +238,8 @@ d_m3UnaryOp_i (i64, EqualToZero, OP_EQZ)
 
 // clz(0), ctz(0) results are undefined for rest platforms, fix it
 #if (defined(__i386__) || defined(__x86_64__)) && !(defined(__AVX2__) || (defined(__ABM__) && defined(__BMI__)))
-    #define OP_CLZ_32(x) (OP_EQZ(x) ? 32 : __builtin_clz(x))
-    #define OP_CTZ_32(x) (OP_EQZ(x) ? 32 : __builtin_ctz(x))
+    #define OP_CLZ_32(x) (UNLIKELY((x) == 0) ? 32 : __builtin_clz(x))
+    #define OP_CTZ_32(x) (UNLIKELY((x) == 0) ? 32 : __builtin_ctz(x))
     // for 64-bit instructions branchless approach more preferable
     #define OP_CLZ_64(x) (__builtin_clzll((x) | (1LL <<  0)) + OP_EQZ(x))
     #define OP_CTZ_64(x) (__builtin_ctzll((x) | (1LL << 63)) + OP_EQZ(x))
@@ -251,10 +251,10 @@ d_m3UnaryOp_i (i64, EqualToZero, OP_EQZ)
     #define OP_CLZ_64(x) __builtin_clzll(x)
     #define OP_CTZ_64(x) __builtin_ctzll(x)
 #else
-    #define OP_CLZ_32(x) (OP_EQZ(x) ? 32 : __builtin_clz(x))
-    #define OP_CTZ_32(x) (OP_EQZ(x) ? 32 : __builtin_ctz(x))
-    #define OP_CLZ_64(x) (OP_EQZ(x) ? 64 : __builtin_clzll(x))
-    #define OP_CTZ_64(x) (OP_EQZ(x) ? 64 : __builtin_ctzll(x))
+    #define OP_CLZ_32(x) (UNLIKELY((x) == 0) ? 32 : __builtin_clz(x))
+    #define OP_CTZ_32(x) (UNLIKELY((x) == 0) ? 32 : __builtin_ctz(x))
+    #define OP_CLZ_64(x) (UNLIKELY((x) == 0) ? 64 : __builtin_clzll(x))
+    #define OP_CTZ_64(x) (UNLIKELY((x) == 0) ? 64 : __builtin_ctzll(x))
 #endif
 
 d_m3UnaryOp_i (u32, Clz, OP_CLZ_32)
@@ -318,6 +318,16 @@ d_m3TruncMacro(_r0, _fp0, i64, Trunc, f32, OP_I64_TRUNC_F32)
 d_m3TruncMacro(_r0, _fp0, u64, Trunc, f32, OP_U64_TRUNC_F32)
 d_m3TruncMacro(_r0, _fp0, i64, Trunc, f64, OP_I64_TRUNC_F64)
 d_m3TruncMacro(_r0, _fp0, u64, Trunc, f64, OP_U64_TRUNC_F64)
+
+d_m3TruncMacro(_r0, _fp0, i32, TruncSat, f32, OP_I32_TRUNC_SAT_F32)
+d_m3TruncMacro(_r0, _fp0, u32, TruncSat, f32, OP_U32_TRUNC_SAT_F32)
+d_m3TruncMacro(_r0, _fp0, i32, TruncSat, f64, OP_I32_TRUNC_SAT_F64)
+d_m3TruncMacro(_r0, _fp0, u32, TruncSat, f64, OP_U32_TRUNC_SAT_F64)
+
+d_m3TruncMacro(_r0, _fp0, i64, TruncSat, f32, OP_I64_TRUNC_SAT_F32)
+d_m3TruncMacro(_r0, _fp0, u64, TruncSat, f32, OP_U64_TRUNC_SAT_F32)
+d_m3TruncMacro(_r0, _fp0, i64, TruncSat, f64, OP_I64_TRUNC_SAT_F64)
+d_m3TruncMacro(_r0, _fp0, u64, TruncSat, f64, OP_U64_TRUNC_SAT_F64)
 
 
 #define d_m3TypeModifyOp(REG_TO, REG_FROM, TO, NAME, FROM)  \
@@ -627,7 +637,7 @@ d_m3Op  (Const32)
 {
     u32 constant = constant64 (u32);
     slot (u32) = constant;
-    
+
     nextOp ();
 }
 

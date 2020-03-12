@@ -23,23 +23,27 @@ IM3CodePage  NewCodePage  (u32 i_minNumLines)
         page->info.sequence = ++s_sequence;
         page->info.numLines = (pageSize - sizeof (M3CodePageHeader)) / sizeof (code_t);
 
-        m3log (emit, "new page: %p; seq: %d; bytes: %d; lines: %d", GetPagePC (page), page->info.sequence, pageSize, page->info.numLines);
+        m3log (runtime, "new page: %p; seq: %d; bytes: %d; lines: %d", GetPagePC (page), page->info.sequence, pageSize, page->info.numLines);
     }
 
     return page;
 }
 
 
-void  FreeCodePages  (IM3CodePage i_page)
+void  FreeCodePages  (IM3CodePage * io_list)
 {
-    while (i_page)
-    {
-        m3log (code, "free page: %d  util: %3.1f%%", i_page->info.sequence, 100. * i_page->info.lineIndex / i_page->info.numLines);
+    IM3CodePage page = * io_list;
 
-        IM3CodePage next = i_page->info.next;
-        m3Free (i_page);
-        i_page = next;
+    while (page)
+    {
+        m3log (code, "free page: %d; %p; util: %3.1f%%", page->info.sequence, page, 100. * page->info.lineIndex / page->info.numLines);
+
+        IM3CodePage next = page->info.next;
+        m3Free (page);
+        page = next;
     }
+
+    * io_list = NULL;
 }
 
 
@@ -93,4 +97,37 @@ IM3CodePage  PopCodePage  (IM3CodePage * i_list)
     page->info.next = NULL;
 
     return page;
+}
+
+
+
+u32  FindCodePageEnd  (IM3CodePage i_list, IM3CodePage * o_end)
+{
+    u32 numPages = 0;
+    * o_end = NULL;
+
+    while (i_list)
+    {
+        * o_end = i_list;
+        ++numPages;
+        i_list = i_list->info.next;
+    }
+
+    return numPages;
+}
+
+
+u32  CountCodePages  (IM3CodePage i_list)
+{
+    IM3CodePage unused;
+    return FindCodePageEnd (i_list, & unused);
+}
+
+
+IM3CodePage GetEndCodePage  (IM3CodePage i_list)
+{
+    IM3CodePage end;
+    FindCodePageEnd (i_list, & end);
+
+    return end;
 }

@@ -13,6 +13,7 @@
 #include "wasm3.h"
 #include "m3_api_wasi.h"
 #include "m3_api_libc.h"
+#include "m3_api_tracer.h"
 #include "m3_env.h"
 
 #define FATAL(msg, ...) { printf("Error: [Fatal] " msg "\n", ##__VA_ARGS__); goto _onfatal; }
@@ -156,8 +157,8 @@ void unescape(char* buff)
             case 't':  *outp++ = '\t'; break;
             case 'x': {
                 char hex[3] = { *(buff+2), *(buff+3), '\0' };
-                *outp++ = strtol(hex, NULL, 16);
-                buff += 2;
+                *outp = strtol(hex, NULL, 16);
+                buff += 2; outp += 1;
                 break;
             }
             // Otherwise just pass the letter
@@ -265,6 +266,11 @@ int  main  (int i_argc, const char* i_argv[])
         if (result) FATAL("m3_LinkWASI: %s", result);
 #endif
 
+#if defined(d_m3HasTracer)
+        result = m3_LinkTracer (runtime->modules);
+        if (result) FATAL("m3_LinkTracer: %s", result);
+#endif
+
         result = m3_LinkLibC (runtime->modules);
         if (result) FATAL("m3_LinkLibC: %s", result);
 
@@ -284,7 +290,7 @@ int  main  (int i_argc, const char* i_argv[])
 
     while (argRepl)
     {
-        char cmd_buff[1024] = { 0, };
+        char cmd_buff[2048] = { 0, };
         char* argv[32] = { 0, };
         fprintf(stdout, "wasm3> ");
         fflush(stdout);

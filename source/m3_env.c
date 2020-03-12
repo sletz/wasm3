@@ -11,12 +11,13 @@
 #include "m3_compile.h"
 #include "m3_exec.h"
 #include "m3_exception.h"
+#include "m3_info.h"
 
 
 M3Result AllocFuncType (IM3FuncType * o_functionType, u32 i_numArgs)
 {
     size_t funcTypeSize = sizeof (M3FuncType) - 3 /* sizeof (argTypes [3]) */ + i_numArgs;
-    
+
     return m3Alloc (o_functionType, u8, funcTypeSize);
 }
 
@@ -30,9 +31,66 @@ bool  AreFuncTypesEqual  (const IM3FuncType i_typeA, const IM3FuncType i_typeB)
             return (memcmp (i_typeA->argTypes, i_typeB->argTypes, i_typeA->numArgs) == 0);
         }
     }
-    
+
     return false;
 }
+
+
+void Runtime_ReleaseCodePages (IM3Runtime i_runtime)
+{
+
+}
+
+
+void  Function_Release  (IM3Function i_function)
+{
+    m3Free (i_function->constants);
+
+    // name can be an alias of fieldUtf8
+    if (i_function->name != i_function->import.fieldUtf8)
+    {
+        m3Free (i_function->name);
+    }
+
+    FreeImportInfo (& i_function->import);
+
+    if (i_function->ownsWasmCode)
+        m3Free (i_function->wasm);
+
+    // Function_FreeCompiledCode (func);
+
+#   if (d_m3EnableCodePageRefCounting)
+    {
+        m3Free (i_function->codePageRefs);
+        i_function->numCodePageRefs = 0;
+    }
+#   endif
+}
+
+
+void  Function_FreeCompiledCode (IM3Function i_function)
+{
+#   if (d_m3EnableCodePageRefCounting)
+    {
+        i_function->compiled = NULL;
+
+        while (i_function->numCodePageRefs--)
+        {
+            IM3CodePage page = i_function->codePageRefs [i_function->numCodePageRefs];
+
+            if (--(page->info.usageCount) == 0)
+            {
+//                printf ("free %p\n", page);
+            }
+        }
+
+        m3Free (i_function->codePageRefs);
+
+        Runtime_ReleaseCodePages (i_function->module->runtime);
+    }
+#   endif
+}
+
 
 
 cstr_t  GetFunctionName  (IM3Function i_function)
@@ -111,19 +169,25 @@ IM3Environment  m3_NewEnvironment  ()
 }
 
 
+void  Environment_Release  (IM3Environment i_environment)
+{
+    IM3FuncType ftype = i_environment->funcTypes;
+
+    while (ftype)
+    {
+        IM3FuncType next = ftype->next;
+        m3Free (ftype);
+        ftype = next;
+    }                                                       m3log (runtime, "freeing %d pages from environment", CountCodePages (i_environment->pagesReleased));
+    FreeCodePages (& i_environment->pagesReleased);
+}
+
+
 void  m3_FreeEnvironment  (IM3Environment i_environment)
 {
     if (i_environment)
     {
-        IM3FuncType ftype = i_environment->funcTypes;
-
-        while (ftype)
-        {
-            IM3FuncType next = ftype->next;
-            m3Free (ftype);
-            ftype = next;
-        }
-        
+        Environment_Release (i_environment);
         m3Free (i_environment);
     }
 }
@@ -133,7 +197,7 @@ void  Environment_AddFuncType  (IM3Environment i_environment, IM3FuncType * io_f
 {
     IM3FuncType addType = * io_funcType;
     IM3FuncType newType = i_environment->funcTypes;
-    
+
     while (newType)
     {
         if (AreFuncTypesEqual (newType, addType))
@@ -141,10 +205,10 @@ void  Environment_AddFuncType  (IM3Environment i_environment, IM3FuncType * io_f
             m3Free (addType);
             break;
         }
-        
+
         newType = newType->next;
     }
-    
+
     if (newType == NULL)
     {
         newType = addType;
@@ -153,6 +217,62 @@ void  Environment_AddFuncType  (IM3Environment i_environment, IM3FuncType * io_f
     }
 
     * io_funcType = newType;
+}
+
+
+IM3CodePage RemoveCodePageOfCapacity (M3CodePage ** io_list, u32 i_minimumLineCount)
+{
+    IM3CodePage prev = NULL;
+    IM3CodePage page = * io_list;
+
+    while (page)
+    {
+        if (NumFreeLines (page) >= i_minimumLineCount)
+        {                                                           d_m3Assert (page->info.usageCount == 0);
+            IM3CodePage next = page->info.next;
+            if (prev)
+                prev->info.next = next; // mid-list
+            else
+                * io_list = next;       // front of list
+
+            break;
+        }
+
+        prev = page;
+        page = page->info.next;
+    }
+
+    return page;
+}
+
+
+IM3CodePage  Environment_AcquireCodePage (IM3Environment i_environment, u32 i_minimumLineCount)
+{
+    return RemoveCodePageOfCapacity (& i_environment->pagesReleased, i_minimumLineCount);
+}
+
+
+void  Environment_ReleaseCodePages  (IM3Environment i_environment, IM3CodePage i_codePageList)
+{
+    IM3CodePage end = i_codePageList;
+
+    while (end)
+    {
+        end->info.lineIndex = 0; // reset page
+
+        IM3CodePage next = end->info.next;
+        if (not next)
+            break;
+
+        end = next;
+    }
+
+    if (end)
+    {
+        // push list to front
+        end->info.next = i_environment->pagesReleased;
+        i_environment->pagesReleased = i_codePageList;
+    }
 }
 
 
@@ -223,17 +343,16 @@ void  FreeCompilationPatches  (IM3Compilation o)
 }
 
 
-void  ReleaseRuntime  (IM3Runtime i_runtime)
+void  Runtime_Release  (IM3Runtime i_runtime)
 {
-    ForEachModule (i_runtime, _FreeModule, NULL);
+    ForEachModule (i_runtime, _FreeModule, NULL);                   d_m3Assert (i_runtime->numActiveCodePages == 0);
 
-    FreeCodePages (i_runtime->pagesOpen);
-    FreeCodePages (i_runtime->pagesFull);
+    Environment_ReleaseCodePages (i_runtime->environment, i_runtime->pagesOpen);
+    Environment_ReleaseCodePages (i_runtime->environment, i_runtime->pagesFull);
 
     FreeCompilationPatches (& i_runtime->compilation);
 
     m3Free (i_runtime->stack);
-
     m3Free (i_runtime->memory.mallocated);
 }
 
@@ -243,8 +362,8 @@ void  m3_FreeRuntime  (IM3Runtime i_runtime)
     if (i_runtime)
     {
         m3_PrintProfilerInfo ();
-        
-        ReleaseRuntime (i_runtime);
+
+        Runtime_Release (i_runtime);
         m3Free (i_runtime);
     }
 }
@@ -307,7 +426,7 @@ M3Result  EvaluateExpression  (IM3Module i_module, void * o_expressed, u8 i_type
     else result = m3Err_mallocFailedCodePage;
 
     runtime.stack = NULL;        // prevent free(stack) in ReleaseRuntime
-    ReleaseRuntime (& runtime);
+    Runtime_Release (& runtime);
     i_module->runtime = savedRuntime;
 
     * io_bytes = o->wasm;
@@ -370,7 +489,7 @@ _       (m3Reallocate (& memory->mallocated, numBytes, numPreviousBytes));
 #       if d_m3LogRuntime
         u8 * oldMallocated = memory->mallocated;
 #       endif
-        
+
         memory->numPages = numPagesToAlloc;
 
         memory->mallocated->length =  numPageBytes;
@@ -443,9 +562,9 @@ _       (EvaluateExpression (io_module, & segmentOffset, c_m3Type_i32, & start, 
 
         if (io_memory->mallocated)
         {
-            u8 * dest = m3MemData(io_memory->mallocated) + segmentOffset;
+            u8 * dest = m3MemData (io_memory->mallocated) + segmentOffset;
 
-            if ((size_t)segmentOffset + segment->size <= io_memory->mallocated->length)
+            if ((size_t) segmentOffset + segment->size <= io_memory->mallocated->length)
                 memcpy (dest, segment->data, segment->size);
             else
                 _throw ("data segment overflowing linear memory");
@@ -512,13 +631,13 @@ M3Result  InitStartFunc  (IM3Module io_module)
 
     if (io_module->startFunction >= 0)
     {
-	    IM3Function function = & io_module->functions [io_module->startFunction];
+        IM3Function function = & io_module->functions [io_module->startFunction];
 
         if (not function->compiled)
         {
 _           (Compile_Function (function));
         }
-	    
+
 _       (m3_Call(function));
     }
 
@@ -749,57 +868,39 @@ void  ReleaseCodePageNoTrack (IM3Runtime i_runtime, IM3CodePage i_codePage)
 {
     if (i_codePage)
     {
-        //        IM3Environment env = i_runtime->environment;
-        IM3Runtime env = i_runtime;
         IM3CodePage * list;
-        
+
         bool pageFull = (NumFreeLines (i_codePage) < d_m3CodePageFreeLinesThreshold);
         if (pageFull)
             list = & i_runtime->pagesFull;
         else
             list = & i_runtime->pagesOpen;
-        
-        PushCodePage (list, i_codePage);                                                m3log (emit, "release page: %d to queue: '%s'", i_codePage->info.sequence, pageFull ? "full" : "open")
+
+        PushCodePage (list, i_codePage);                        m3log (emit, "release page: %d to queue: '%s'", i_codePage->info.sequence, pageFull ? "full" : "open")
     }
 }
 
 
-IM3CodePage  AcquireCodePageWithCapacityR  (IM3Runtime i_runtime, u32 i_lineCount)
+IM3CodePage  AcquireCodePageWithCapacity  (IM3Runtime i_runtime, u32 i_minLineCount)
 {
-    IM3CodePage page;
+    IM3CodePage page = RemoveCodePageOfCapacity (& i_runtime->pagesOpen, i_minLineCount);
 
-    if (i_runtime->pagesOpen)
+    if (not page)
     {
-        page = PopCodePage (& i_runtime->pagesOpen);
+        page = Environment_AcquireCodePage (i_runtime->environment, i_minLineCount);
 
-        if (NumFreeLines (page) < i_lineCount)
-        {
-            IM3CodePage tryAnotherPage = AcquireCodePageWithCapacityR (i_runtime, i_lineCount);
+        if (not page)
+            page = NewCodePage (i_minLineCount);
 
-            ReleaseCodePageNoTrack (i_runtime, page);
-            page = tryAnotherPage;
-        }
-    }
-    else
-    {
-        page = NewCodePage (i_lineCount);
         if (page)
             i_runtime->numCodePages++;
     }
-
-    return page;
-}
-
-
-IM3CodePage  AcquireCodePageWithCapacity  (IM3Runtime i_runtime, u32 i_lineCount)
-{
-    IM3CodePage page = AcquireCodePageWithCapacityR (i_runtime, i_lineCount);
     
     if (page)
     {                                                            m3log (emit, "acquire page: %d", page->info.sequence);
         i_runtime->numActiveCodePages++;
     }
-    
+
     return page;
 }
 
@@ -807,20 +908,6 @@ IM3CodePage  AcquireCodePageWithCapacity  (IM3Runtime i_runtime, u32 i_lineCount
 IM3CodePage  AcquireCodePage  (IM3Runtime i_runtime)
 {
     return AcquireCodePageWithCapacity (i_runtime, d_m3CodePageFreeLinesThreshold);
-}
-
-
-u32  CountPages  (IM3CodePage i_page)
-{
-    u32 numPages = 0;
-
-    while (i_page)
-    {
-        ++numPages;
-        i_page = i_page->info.next;
-    }
-
-    return numPages;
 }
 
 
@@ -832,10 +919,10 @@ void  ReleaseCodePage  (IM3Runtime i_runtime, IM3CodePage i_codePage)
         i_runtime->numActiveCodePages--;
 
 #       if defined (DEBUG)
-            u32 numOpen = CountPages (i_runtime->pagesOpen);
-            u32 numFull = CountPages (i_runtime->pagesFull);
+            u32 numOpen = CountCodePages (i_runtime->pagesOpen);
+            u32 numFull = CountCodePages (i_runtime->pagesFull);
 
-            m3log (emit, "runtime: %p; open-pages: %d; full-pages: %d; active: %d; total: %d", i_runtime, numOpen, numFull, i_runtime->numActiveCodePages, i_runtime->numCodePages);
+            m3log (runtime, "runtime: %p; open-pages: %d; full-pages: %d; active: %d; total: %d", i_runtime, numOpen, numFull, i_runtime->numActiveCodePages, i_runtime->numCodePages);
 
             d_m3Assert (numOpen + numFull + i_runtime->numActiveCodePages == i_runtime->numCodePages);
 
@@ -904,16 +991,16 @@ M3StackInfo  m3_GetNativeStackInfo  (i32 i_stackSize)
 
 const uint8_t *  m3_GetMemory  (IM3Runtime i_runtime, uint32_t * o_memorySizeInBytes, uint32_t i_memoryIndex)
 {
-    uint8_t * memory = NULL;                          
+    uint8_t * memory = NULL;
     d_m3Assert (i_memoryIndex == 0);
 
     if (i_runtime)
     {
         u32 size = (u32) i_runtime->memory.mallocated->length;
-        
+
         if (o_memorySizeInBytes)
             * o_memorySizeInBytes = size;
-        
+
         if (size)
             memory = m3MemData (i_runtime->memory.mallocated);
     }
