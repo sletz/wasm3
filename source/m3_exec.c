@@ -200,7 +200,7 @@ d_m3OpDef  (Compile)
     if (not result)
     {
         // patch up compiled pc and call rewriten op_Call
-        *((size_t *) --_pc) = (size_t) (function->compiled);
+        * ((size_t *) --_pc) = (size_t) (function->compiled);
         --_pc;
         result = nextOpDirect ();
     }
@@ -245,7 +245,7 @@ d_m3OpDef  (Entry)
             if (not r)
                 SPrintArg (str, 99, _sp, function->funcType->returnType);
 
-            m3log (exec, " exit  < %s %s %s   %s", function->name, returnType ? "->" : "", str, r ? r : "");
+            m3log (exec, " exit  < %s %s %s   %s", function->name, returnType ? "->" : "", str, r ? (cstr_t)r : "");
 #       elif d_m3LogStackTrace
             if (r)
                 printf (" ** %s  %p\n", function->name, _sp);
@@ -404,12 +404,12 @@ d_m3OpDef (PreserveCopySlot_64)
 }
 
 
-#if d_m3RuntimeStackDumps
+#if d_m3EnableOpTracing
 //--------------------------------------------------------------------------------------------------------
 d_m3OpDef  (DumpStack)
 {
     u32 opcodeIndex         = immediate (u32);
-    u64 stackHeight         = immediate (u64);
+    u32 stackHeight         = immediate (u32);
     IM3Function function    = immediate (IM3Function);
 
     cstr_t funcName = (function) ? function->name : "";
@@ -418,7 +418,7 @@ d_m3OpDef  (DumpStack)
     printf (" %-25s     r0: 0x%016" PRIx64 "  i:%" PRIi64 "  u:%" PRIu64 "\n", funcName, _r0, _r0, _r0);
     printf ("                                     fp0: %lf  \n", _fp0);
 
-    u64 * sp = _sp;
+    m3stack_t sp = _sp;
 
     for (u32 i = 0; i < stackHeight; ++i)
     {
@@ -439,19 +439,19 @@ d_m3OpDef  (DumpStack)
 
 # if d_m3EnableOpProfiling
 //--------------------------------------------------------------------------------------------------------
-M3ProfilerSlot s_opProfilerCounts [c_m3ProfilerSlotMask + 1] = {};
+static M3ProfilerSlot s_opProfilerCounts [d_m3ProfilerSlotMask + 1] = {};
 
 void  ProfileHit  (cstr_t i_operationName)
 {
     u64 ptr = (u64) i_operationName;
 
-    M3ProfilerSlot * slot = & s_opProfilerCounts [ptr & c_m3ProfilerSlotMask];
+    M3ProfilerSlot * slot = & s_opProfilerCounts [ptr & d_m3ProfilerSlotMask];
 
     if (slot->opName)
     {
         if (slot->opName != i_operationName)
         {
-            m3Abort ("profiler slot collision; increase c_m3ProfilerSlotMask");
+            m3Abort ("profiler slot collision; increase d_m3ProfilerSlotMask");
         }
     }
 
@@ -469,7 +469,7 @@ void  m3_PrintProfilerInfo  ()
     {
         maxSlot->hitCount = 0;
 
-        for (u32 i = 0; i <= c_m3ProfilerSlotMask; ++i)
+        for (u32 i = 0; i <= d_m3ProfilerSlotMask; ++i)
         {
             M3ProfilerSlot * slot = & s_opProfilerCounts [i];
 

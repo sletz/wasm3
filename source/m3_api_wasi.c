@@ -249,8 +249,8 @@ m3ApiRawFunction(m3_wasi_unstable_fd_prestat_dir_name)
 
     if (runtime == NULL) { m3ApiReturn(__WASI_EINVAL); }
     if (fd < 3 || fd >= PREOPEN_CNT) { m3ApiReturn(__WASI_EBADF); }
-    int size = m3_min (strlen(preopen[fd].path), path_len);
-    memcpy(path, preopen[fd].path, size);
+    size_t slen = strlen(preopen[fd].path);
+    memcpy(path, preopen[fd].path, M3_MIN(slen, path_len));
     m3ApiReturn(__WASI_ESUCCESS);
 }
 
@@ -262,8 +262,8 @@ m3ApiRawFunction(m3_wasi_unstable_fd_prestat_get)
 
     if (runtime == NULL) { m3ApiReturn(__WASI_EINVAL); }
     if (fd < 3 || fd >= PREOPEN_CNT) { m3ApiReturn(__WASI_EBADF); }
-    *(buf)   = __WASI_PREOPENTYPE_DIR;
-    *(buf+1) = strlen(preopen[fd].path);
+    * (buf)   = __WASI_PREOPENTYPE_DIR;
+    * (buf+1) = strlen(preopen[fd].path);
     m3ApiReturn(__WASI_ESUCCESS);
 }
 
@@ -542,7 +542,7 @@ m3ApiRawFunction(m3_wasi_unstable_random_get)
         ssize_t retlen = 0;
 
 #if defined(__wasi__) || defined(__APPLE__) || defined(__ANDROID_API__) || defined(__OpenBSD__)
-        size_t reqlen = m3_min (buflen, 256);
+        size_t reqlen = M3_MIN (buflen, 256);
 #   if defined(__APPLE__) && (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
         retlen = SecRandomCopyBytes(kSecRandomDefault, reqlen, buf) < 0 ? -1 : reqlen;
 #   else
@@ -666,9 +666,6 @@ _   (SuppressLookupFailure (m3_LinkRawFunction (module, wasi, "fd_read",        
 _   (SuppressLookupFailure (m3_LinkRawFunction (module, wasi, "fd_seek",              "i(iIi*)", &m3_wasi_unstable_fd_seek)));
 _   (SuppressLookupFailure (m3_LinkRawFunction (module, wasi, "fd_datasync",          "i(i)",    &m3_wasi_unstable_fd_datasync)));
 _   (SuppressLookupFailure (m3_LinkRawFunction (module, wasi, "fd_close",             "i(i)",    &m3_wasi_unstable_fd_close)));
-
-//_   (SuppressLookupFailure (m3_LinkRawFunction (module, wasi, "sock_send",            "i()",  &...)));
-//_   (SuppressLookupFailure (m3_LinkRawFunction (module, wasi, "sock_recv",            "i()",  &...)));
 
 _   (SuppressLookupFailure (m3_LinkRawFunction (module, wasi, "random_get",           "i(*i)",   &m3_wasi_unstable_random_get)));
 

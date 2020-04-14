@@ -83,7 +83,7 @@ cstr_t  SPrintFuncTypeSignature  (IM3FuncType i_funcType)
 }
 
 
-size_t  SPrintArg  (char * o_string, size_t i_n, u64 * i_sp, u8 i_type)
+size_t  SPrintArg  (char * o_string, size_t i_n, m3stack_t i_sp, u8 i_type)
 {
     int len = 0;
 
@@ -92,13 +92,13 @@ size_t  SPrintArg  (char * o_string, size_t i_n, u64 * i_sp, u8 i_type)
     if      (i_type == c_m3Type_i32)
         len = snprintf (o_string, i_n, "%" PRIi32, * (i32 *) i_sp);
     else if (i_type == c_m3Type_i64)
-        len = snprintf (o_string, i_n, "%" PRIi64, * i_sp);
+        len = snprintf (o_string, i_n, "%" PRIi64, * (i64 *) i_sp);
     else if (i_type == c_m3Type_f32)
         len = snprintf (o_string, i_n, "%f",  * (f32 *) i_sp);
     else if (i_type == c_m3Type_f64)
         len = snprintf (o_string, i_n, "%lf", * (f64 *) i_sp);
 
-    len = m3_max (0, len);
+    len = M3_MAX (0, len);
 
     return len;
 }
@@ -106,14 +106,16 @@ size_t  SPrintArg  (char * o_string, size_t i_n, u64 * i_sp, u8 i_type)
 
 cstr_t  SPrintFunctionArgList  (IM3Function i_function, m3stack_t i_sp)
 {
+    int ret;
     static char string [256];
 
     char * s = string;
     ccstr_t e = string + sizeof(string) - 1;
 
-    s += m3_max (0, snprintf (s, e-s, "("));
+    ret = snprintf (s, e-s, "(");
+    s += M3_MAX (0, ret);
 
-    u64 * argSp = (u64 *) i_sp;
+    m3stack_t argSp = i_sp;
 
     IM3FuncType funcType = i_function->funcType;
     if (funcType)
@@ -125,17 +127,21 @@ cstr_t  SPrintFunctionArgList  (IM3Function i_function, m3stack_t i_sp)
         {
             u8 type = types [i];
 
-            s += m3_max (0, snprintf (s, e-s, "%s: ", c_waTypes [type]));
+            ret = snprintf (s, e-s, "%s: ", c_waTypes [type]);
+            s += M3_MAX (0, ret);
 
             s += SPrintArg (s, e-s, argSp + i, type);
 
-            if (i != numArgs - 1)
-                s += m3_max (0, snprintf (s, e-s, ", "));
+            if (i != numArgs - 1) {
+                ret = snprintf (s, e-s, ", ");
+                s += M3_MAX (0, ret);
+            }
         }
     }
     else printf ("null signature");
 
-    s += m3_max (0, snprintf (s, e-s, ")"));
+    ret = snprintf (s, e-s, ")");
+    s += M3_MAX (0, ret);
 
     return string;
 }
@@ -172,14 +178,14 @@ OpInfo find_operation_info  (IM3Operation i_operation)
 
 
 #undef fetch
-#define fetch(TYPE) (*(TYPE *) ((*o_pc)++))
+#define fetch(TYPE) (* (TYPE *) ((*o_pc)++))
 
 #define d_m3Decoder(FUNC) void Decode_##FUNC (char * o_string, u8 i_opcode, IM3Operation i_operation, IM3OpInfo i_opInfo, pc_t * o_pc)
 
 d_m3Decoder  (Call)
 {
     void * function = fetch (void *);
-    u16 stackOffset = fetch (u16);
+    i32 stackOffset = fetch (i32);
 
     sprintf (o_string, "%p; stack-offset: %d", function, stackOffset);
 }
@@ -215,20 +221,20 @@ d_m3Decoder  (Branch)
 
 d_m3Decoder  (BranchTable)
 {
-    u16 slot = fetch (u16);
+    u32 slot = fetch (u32);
 
-    sprintf (o_string, "slot: %" PRIu16 "; targets: ", slot);
+    sprintf (o_string, "slot: %" PRIu32 "; targets: ", slot);
 
 //    IM3Function function = fetch2 (IM3Function);
 
-    m3reg_t targets = fetch (m3reg_t);
+    i32 targets = fetch (i32);
 
     char str [1000];
 
-    for (m3reg_t i = 0; i <targets; ++i)
+    for (i32 i = 0; i < targets; ++i)
     {
         pc_t addr = fetch (pc_t);
-        sprintf (str, "%" PRIu64 "=%p, ", i, addr);
+        sprintf (str, "%" PRIi32 "=%p, ", i, addr);
         strcat (o_string, str);
     }
 
@@ -412,17 +418,17 @@ void  log_opcode  (IM3Compilation o, u8 i_opcode)
 
 void emit_stack_dump (IM3Compilation o)
 {
-#   if d_m3RuntimeStackDumps
+# if d_m3EnableOpTracing
     if (o->numEmits)
     {
         EmitOp          (o, op_DumpStack);
-        EmitConstant    (o, o->numOpcodes);
-        EmitConstant    (o, GetMaxExecSlot (o));
-        EmitConstant    (o, (u64) o->function);
+        EmitConstant32  (o, o->numOpcodes);
+        EmitConstant32  (o, GetMaxUsedSlotPlusOne(o));
+        EmitPointer     (o, o->function);
 
         o->numEmits = 0;
     }
-#   endif
+# endif
 }
 
 

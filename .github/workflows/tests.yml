@@ -5,56 +5,70 @@ on: [push, pull_request]
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    name: build-linux-${{ matrix.config.target }}
     timeout-minutes: 10
 
     strategy:
       fail-fast: false
+
       matrix:
-        compiler: [gcc, clang]
-        flags: ["", "-m32"]
-        build_type: ["-DCMAKE_BUILD_TYPE=Debug", ""]
-
-        exclude:
-          - compiler: clang
-            build_type: "-DCMAKE_BUILD_TYPE=Debug"
-
-          - compiler: gcc    # TODO: fails on numeric operations
-            flags: "-m32"
-
+        config:
+        - {target: clang,       cc: clang,      }
+        - {target: clang-x86,   cc: clang,      flags: -DCMAKE_C_FLAGS="-m32",    install: "gcc-multilib"   }
+        - {target: gcc,         cc: gcc,        }
+        - {target: gcc-debug,   cc: gcc,        flags: -DCMAKE_BUILD_TYPE=Debug   }
+        # TODO: fails on numeric operations
+        #- {target: gcc-x86,     cc: gcc,        flags: "-m32",                    install: "gcc-multilib"   }
+ 
     steps:
-    - uses: actions/checkout@v1
-    - name: Install multilib
-      if: contains(matrix.flags, '-m32')
+    - uses: actions/checkout@v2
+    - name: Install ${{ matrix.config.install }}
+      if: ${{ matrix.config.install }}
       run: |
         sudo apt update
-        sudo apt install gcc-multilib
-    - name: Run CMake
+        sudo apt install ${{ matrix.config.install }}
+    - name: Configure
       env:
-        CC: ${{ matrix.compiler }}
-        CFLAGS: ${{ matrix.flags }}
+        CC: ${{ matrix.config.cc }}
       run: |
         mkdir build
         cd build
-        cmake ${{ matrix.build_type }} ..
+        cmake ${{ matrix.config.flags }} ..
     - name: Build
       run: |
         cmake --build build
-    - name: Run spec tests
+    - name: Test WebAssembly spec
+      run: cd test && python3 run-spec-test.py
+    - name: Test WASI apps
+      run: cd test && python3 run-wasi-test.py
+
+  build-linux-alpine:
+    runs-on: ubuntu-latest
+    container: alpine:3.10
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Prepare
+      run: apk add build-base cmake python3 --update-cache
+    - name: Configure
       run: |
-        cd test
-        ./run-spec-test.py
-    - name: Run WASI tests
-      run: |
-        cd test
-        ./run-wasi-test.py
+        mkdir build
+        cd build
+        cmake ..
+    - name: Build
+      run: cmake --build build
+    - name: Test WebAssembly spec
+      run: cd test && python3 run-spec-test.py
+    - name: Test WASI apps
+      run: cd test && python3 run-wasi-test.py
 
   build-mac:
     runs-on: macos-latest
     timeout-minutes: 10
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Run CMake
+    - uses: actions/checkout@v2
+    - name: Configure
       run: |
         mkdir build
         cd build
@@ -62,14 +76,10 @@ jobs:
     - name: Build
       run: |
         cmake --build build
-    - name: Run spec tests
-      run: |
-        cd test
-        ./run-spec-test.py
-    - name: Run WASI tests
-      run: |
-        cd test
-        ./run-wasi-test.py
+    - name: Test WebAssembly spec
+      run: cd test && python3 run-spec-test.py
+    - name: Test WASI apps
+      run: cd test && python3 run-wasi-test.py
 
   build-win:
     runs-on: windows-latest
@@ -82,8 +92,8 @@ jobs:
         toolset: ["-T ClangCL", ""]
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Run CMake
+    - uses: actions/checkout@v2
+    - name: Configure
       run: |
         mkdir build
         cd build
@@ -92,11 +102,11 @@ jobs:
       run: |
         cmake --build build --config Release
         cp ./build/Release/wasm3.exe ./build/
-    - name: Run spec tests
+    - name: Test WebAssembly spec
       run: |
         cd test
         python run-spec-test.py
-    - name: Run WASI tests
+    - name: Test WASI apps
       run: |
         cd test
         python run-wasi-test.py
@@ -106,14 +116,14 @@ jobs:
     timeout-minutes: 10
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Install Wasienv
       run: curl https://raw.githubusercontent.com/wasienv/wasienv/master/install.sh | sh
     - name: Install Wasmer
       env:
         WASMER_RELEASE_TAG: "0.15.0" 
       run: curl https://get.wasmer.io -sSfL | sh
-    - name: Run CMake
+    - name: Configure
       run: |
         source $HOME/.wasienv/wasienv.sh
         mkdir build-wasi
@@ -123,13 +133,13 @@ jobs:
       run: |
         source $HOME/.wasienv/wasienv.sh
         cmake --build build-wasi
-    - name: Run spec tests (in Wasmer)
+    - name: Test WebAssembly spec (in Wasmer)
       run: |
         source $HOME/.wasmer/wasmer.sh
         cd test
         ./run-spec-test.py --exec "wasmer run --dir=. ../build-wasi/wasm3.wasm -- --repl"
 
-    - name: Run CMake (native)
+    - name: Configure (native)
       run: |
         mkdir build
         cd build
@@ -137,7 +147,7 @@ jobs:
     - name: Build (native)
       run: |
         cmake --build build
-    - name: Run spec tests (in Wasm3, self-hosting)
+    - name: Test WebAssembly spec (in Wasm3, self-hosting)
       continue-on-error: true    # TODO
       run: |
         cd test
@@ -149,7 +159,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: List Xcode versions
       run: ls /Applications | grep Xcode
     - name: Select Xcode 11
@@ -163,7 +173,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: seanmiddleditch/gha-setup-ninja@master
     - name: Set up JDK 1.8
       uses: actions/setup-java@v1
@@ -174,43 +184,65 @@ jobs:
         cd platforms/android
         ./gradlew build
 
-  build-raspberry:
-    runs-on: [self-hosted, linux, ARM]
-    if: "false"    # TODO: implement QEMU-based RPi build/test environment
+  build-cross-qemu:
+    runs-on: ubuntu-latest
+    name: build-cross-qemu-${{ matrix.config.target }}
     timeout-minutes: 10
 
     strategy:
       fail-fast: false
       matrix:
-        compiler: [gcc, clang]
+        config:
+        - {target: arm,     toolchain: gcc-arm-linux-gnueabi,     cc: arm-linux-gnueabi-gcc,      qemu: qemu-arm-static     }
+        - {target: armhf,   toolchain: gcc-arm-linux-gnueabihf,   cc: arm-linux-gnueabihf-gcc,    qemu: qemu-arm-static     }
+        - {target: aarch64, toolchain: gcc-aarch64-linux-gnu,     cc: aarch64-linux-gnu-gcc,      qemu: qemu-aarch64-static }
+        - {target: riscv64, toolchain: gcc-riscv64-linux-gnu,     cc: riscv64-linux-gnu-gcc,      qemu: qemu-riscv64-static }
+        - {target: ppc,     toolchain: gcc-powerpc-linux-gnu,     cc: powerpc-linux-gnu-gcc,      qemu: qemu-ppc-static     }
+        - {target: ppc64,   toolchain: gcc-powerpc64-linux-gnu,   cc: powerpc64-linux-gnu-gcc,    qemu: qemu-ppc64-static   }
+        - {target: ppc64le, toolchain: gcc-powerpc64le-linux-gnu, cc: powerpc64le-linux-gnu-gcc,  qemu: qemu-ppc64le-static }
+        - {target: s390x,   toolchain: gcc-s390x-linux-gnu,       cc: s390x-linux-gnu-gcc,        qemu: qemu-s390x-static   }
+        - {target: alpha,   toolchain: gcc-alpha-linux-gnu,       cc: alpha-linux-gnu-gcc,        qemu: qemu-alpha-static   }
+        - {target: sparc64, toolchain: gcc-sparc64-linux-gnu,     cc: sparc64-linux-gnu-gcc,      qemu: qemu-sparc64-static,    spec-fails: true }
+        - {target: mips,    toolchain: gcc-mips-linux-gnu,          cc: mips-linux-gnu-gcc,         qemu: qemu-mips-static,     spec-fails: true }
+        - {target: mips64,  toolchain: gcc-mips64-linux-gnuabi64,   cc: mips64-linux-gnuabi64-gcc,  qemu: qemu-mips64-static,   spec-fails: true }
+        - {target: mipsel,  toolchain: gcc-mipsel-linux-gnu,        cc: mipsel-linux-gnu-gcc,       qemu: qemu-mipsel-static,   spec-fails: true }
+        - {target: mips64el,toolchain: gcc-mips64el-linux-gnuabi64, cc: mips64el-linux-gnuabi64-gcc,qemu: qemu-mips64el-static, spec-fails: true }
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Run CMake
-      env:
-        CC: ${{ matrix.compiler }}
+    - uses: actions/checkout@v2
+    - name: Install QEMU
+      run: |
+        wget http://archive.ubuntu.com/ubuntu/pool/universe/q/qemu/qemu-user-static_4.2-3ubuntu4_amd64.deb
+        sudo dpkg -i qemu-user-static_4.2-3ubuntu4_amd64.deb
+    - name: Install ${{ matrix.config.toolchain }}
+      run: |
+        sudo apt update
+        sudo apt install ${{ matrix.config.toolchain }}
+    - name: Build
       run: |
         mkdir build
         cd build
-        cmake ..
-    - name: Build
-      run: |
-        cmake --build build
-    - name: Run spec tests
-      run: |
-        cd test
-        python3 run-spec-test.py
-    - name: Run WASI tests
+        ${{ matrix.config.cc }} -DASSERTS -Dd_m3HasWASI \
+            -I../source ../source/*.c ../platforms/app/main.c \
+            -O3 -g0 -flto -lm -static \
+            -o wasm3
+    - name: Test WebAssembly spec
+      continue-on-error: ${{ matrix.config.spec-fails }}
       run: |
         cd test
-        ./run-wasi-test.py
+        python3 run-spec-test.py --exec "${{ matrix.config.qemu }} ../build/wasm3 --repl"
+    - name: Test WASI apps
+      continue-on-error: true
+      run: |
+        cd test
+        python3 run-wasi-test.py --fast --exec "${{ matrix.config.qemu }} ../build/wasm3"
 
   build-platformio:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Set up Python
       uses: actions/setup-python@v1
       with:
@@ -228,17 +260,18 @@ jobs:
       run: |
         cd platforms/esp8266
         pio run
-    - name: Build ESP32
-      run: |
-        cd platforms/esp32-pio
-        pio run
+    # TODO:
+    #- name: Build ESP32
+    #  run: |
+    #    cd platforms/esp32-pio
+    #    pio run
 
   build-platformio-arm:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Set up Python
       uses: actions/setup-python@v1
       with:
@@ -269,7 +302,7 @@ jobs:
     timeout-minutes: 10
     
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Set up Python
       uses: actions/setup-python@v1
       with:
@@ -293,7 +326,7 @@ jobs:
     if: "github.event_name == 'push'"
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Set up Particle CLI
       run: sudo npm install -g particle-cli
     - name: Log in
@@ -311,7 +344,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Build for ESP32 (IDF v4.0)
       run: |
         . $IDF_PATH/export.sh
@@ -335,10 +368,11 @@ jobs:
 
   build-cpp:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v1
-      - name: Run CMake
+      - uses: actions/checkout@v2
+      - name: Configure
         run: |
           cd platforms/cpp
           mkdir build
@@ -352,3 +386,67 @@ jobs:
         run: |
           cd platforms/cpp/build
           ./wasm3_cpp_example
+
+  build-as-cpp:
+    name: maintenance (build as C++)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        g++ -xc++ -Dd_m3HasWASI \
+            -I../source ../source/*.c ../platforms/app/main.c \
+            -O3 -g0 -lm \
+            -o wasm3
+
+  build-with-logs:
+    name: maintenance (debug logs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        g++ -xc++ -Dd_m3HasWASI -Dd_m3LogsDefined \
+            -Dd_m3EnableOpTracing \
+            -Dd_m3LogParse=1 \
+            -Dd_m3LogModule=1 \
+            -Dd_m3LogCompile=1 \
+            -Dd_m3LogWasmStack=1 \
+            -Dd_m3LogEmit=1 \
+            -Dd_m3LogCodePages=1 \
+            -Dd_m3LogExec=1 \
+            -Dd_m3LogRuntime=1 \
+            -Dd_m3LogStackTrace=1 \
+            -Dd_m3LogNativeStack=1 \
+            -I../source ../source/*.c ../platforms/app/main.c \
+            -O3 -g0 -lm \
+            -o wasm3
+
+  build-preprocessed-ops:
+    name: maintenance (preprocess ops)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install sponge
+      run: |
+        sudo apt update
+        sudo apt install moreutils
+    - name: Build
+      run: |
+        make -f extra/utils.mk preprocess
+        mkdir build
+        cd build
+        gcc -Dd_m3HasWASI \
+            -I../source ../source/*.c ../platforms/app/main.c \
+            -O3 -g0 -lm \
+            -o wasm3

@@ -475,7 +475,7 @@ M3Result  ResizeMemory  (IM3Runtime io_runtime, u32 i_numPages)
 
         // Limit the amount of memory that gets allocated
         if (io_runtime->memoryLimit) {
-            numPageBytes = m3_min (numPageBytes, io_runtime->memoryLimit);
+            numPageBytes = M3_MIN (numPageBytes, io_runtime->memoryLimit);
         }
 
         size_t numBytes = numPageBytes + sizeof (M3MemoryHeader);
@@ -486,9 +486,9 @@ M3Result  ResizeMemory  (IM3Runtime io_runtime, u32 i_numPages)
 
 _       (m3Reallocate (& memory->mallocated, numBytes, numPreviousBytes));
 
-#       if d_m3LogRuntime
-        u8 * oldMallocated = memory->mallocated;
-#       endif
+# if d_m3LogRuntime
+        M3MemoryHeader * oldMallocated = memory->mallocated;
+# endif
 
         memory->numPages = numPagesToAlloc;
 
@@ -895,7 +895,7 @@ IM3CodePage  AcquireCodePageWithCapacity  (IM3Runtime i_runtime, u32 i_minLineCo
         if (page)
             i_runtime->numCodePages++;
     }
-    
+
     if (page)
     {                                                            m3log (emit, "acquire page: %d", page->info.sequence);
         i_runtime->numActiveCodePages++;
@@ -989,7 +989,7 @@ M3StackInfo  m3_GetNativeStackInfo  (i32 i_stackSize)
     return info;
 }
 
-const uint8_t *  m3_GetMemory  (IM3Runtime i_runtime, uint32_t * o_memorySizeInBytes, uint32_t i_memoryIndex)
+uint8_t *  m3_GetMemory  (IM3Runtime i_runtime, uint32_t * o_memorySizeInBytes, uint32_t i_memoryIndex)
 {
     uint8_t * memory = NULL;
     d_m3Assert (i_memoryIndex == 0);
