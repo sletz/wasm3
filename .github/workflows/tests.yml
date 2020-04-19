@@ -10,7 +10,6 @@ jobs:
 
     strategy:
       fail-fast: false
-
       matrix:
         config:
         - {target: clang,       cc: clang,      }
@@ -81,15 +80,19 @@ jobs:
     - name: Test WASI apps
       run: cd test && python3 run-wasi-test.py
 
-  build-win:
+  build-windows:
     runs-on: windows-latest
+    name: build-windows-${{ matrix.config.target }}
     timeout-minutes: 10
 
     strategy:
       fail-fast: false
       matrix:
-        platform: ["-A Win32", "-A x64"]
-        toolset: ["-T ClangCL", ""]
+        config:
+        - {target: clang-x64,   platform: "-A x64",     toolset: "-T ClangCL"   }
+        - {target: msvc-x64,    platform: "-A x64",     toolset: ""             }
+        - {target: clang-x86,   platform: "-A Win32",   toolset: "-T ClangCL"   }
+        - {target: msvc-x86,    platform: "-A Win32",   toolset: ""             }
 
     steps:
     - uses: actions/checkout@v2
@@ -97,7 +100,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake ${{ matrix.platform }} ${{ matrix.toolset }} ..
+        cmake ${{ matrix.config.platform }} ${{ matrix.config.toolset }} ..
     - name: Build
       run: |
         cmake --build build --config Release
@@ -202,18 +205,20 @@ jobs:
         - {target: ppc64le, toolchain: gcc-powerpc64le-linux-gnu, cc: powerpc64le-linux-gnu-gcc,  qemu: qemu-ppc64le-static }
         - {target: s390x,   toolchain: gcc-s390x-linux-gnu,       cc: s390x-linux-gnu-gcc,        qemu: qemu-s390x-static   }
         - {target: alpha,   toolchain: gcc-alpha-linux-gnu,       cc: alpha-linux-gnu-gcc,        qemu: qemu-alpha-static   }
-        - {target: sparc64, toolchain: gcc-sparc64-linux-gnu,     cc: sparc64-linux-gnu-gcc,      qemu: qemu-sparc64-static,    spec-fails: true }
-        - {target: mips,    toolchain: gcc-mips-linux-gnu,          cc: mips-linux-gnu-gcc,         qemu: qemu-mips-static,     spec-fails: true }
-        - {target: mips64,  toolchain: gcc-mips64-linux-gnuabi64,   cc: mips64-linux-gnuabi64-gcc,  qemu: qemu-mips64-static,   spec-fails: true }
-        - {target: mipsel,  toolchain: gcc-mipsel-linux-gnu,        cc: mipsel-linux-gnu-gcc,       qemu: qemu-mipsel-static,   spec-fails: true }
-        - {target: mips64el,toolchain: gcc-mips64el-linux-gnuabi64, cc: mips64el-linux-gnuabi64-gcc,qemu: qemu-mips64el-static, spec-fails: true }
+        - {target: sparc64, toolchain: gcc-sparc64-linux-gnu,     cc: sparc64-linux-gnu-gcc,      qemu: qemu-sparc64-static    }
+        - {target: mips,    toolchain: gcc-mips-linux-gnu,          cc: mips-linux-gnu-gcc,         qemu: qemu-mips-static     }
+        - {target: mips64,  toolchain: gcc-mips64-linux-gnuabi64,   cc: mips64-linux-gnuabi64-gcc,  qemu: qemu-mips64-static   }
+        - {target: mipsel,  toolchain: gcc-mipsel-linux-gnu,        cc: mipsel-linux-gnu-gcc,       qemu: qemu-mipsel-static   }
+        - {target: mips64el,toolchain: gcc-mips64el-linux-gnuabi64, cc: mips64el-linux-gnuabi64-gcc,qemu: qemu-mips64el-static }
 
     steps:
     - uses: actions/checkout@v2
     - name: Install QEMU
+      env:
+        QEMU_DEB: "qemu-user-static_4.2-3ubuntu5_amd64.deb"
       run: |
-        wget http://archive.ubuntu.com/ubuntu/pool/universe/q/qemu/qemu-user-static_4.2-3ubuntu4_amd64.deb
-        sudo dpkg -i qemu-user-static_4.2-3ubuntu4_amd64.deb
+        wget http://archive.ubuntu.com/ubuntu/pool/universe/q/qemu/${{ env.QEMU_DEB }}
+        sudo dpkg -i ${{ env.QEMU_DEB }}
     - name: Install ${{ matrix.config.toolchain }}
       run: |
         sudo apt update
@@ -227,12 +232,11 @@ jobs:
             -O3 -g0 -flto -lm -static \
             -o wasm3
     - name: Test WebAssembly spec
-      continue-on-error: ${{ matrix.config.spec-fails }}
       run: |
         cd test
         python3 run-spec-test.py --exec "${{ matrix.config.qemu }} ../build/wasm3 --repl"
     - name: Test WASI apps
-      continue-on-error: true
+      continue-on-error: true    # TODO
       run: |
         cd test
         python3 run-wasi-test.py --fast --exec "${{ matrix.config.qemu }} ../build/wasm3"
@@ -402,6 +406,8 @@ jobs:
             -I../source ../source/*.c ../platforms/app/main.c \
             -O3 -g0 -lm \
             -o wasm3
+    - name: Test
+      run: ./build/wasm3 ./test/wasi/test.wasm
 
   build-with-logs:
     name: maintenance (debug logs)
@@ -429,6 +435,8 @@ jobs:
             -I../source ../source/*.c ../platforms/app/main.c \
             -O3 -g0 -lm \
             -o wasm3
+    - name: Test
+      run: ./build/wasm3 ./test/wasi/test.wasm > /dev/null
 
   build-preprocessed-ops:
     name: maintenance (preprocess ops)
@@ -450,3 +458,5 @@ jobs:
             -I../source ../source/*.c ../platforms/app/main.c \
             -O3 -g0 -lm \
             -o wasm3
+    - name: Test
+      run: ./build/wasm3 ./test/wasi/test.wasm
