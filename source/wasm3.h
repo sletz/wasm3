@@ -10,8 +10,8 @@
 
 #define M3_VERSION_MAJOR 0
 #define M3_VERSION_MINOR 4
-#define M3_VERSION_REV   6
-#define M3_VERSION       "0.4.6"
+#define M3_VERSION_REV   7
+#define M3_VERSION       "0.4.7"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -55,9 +55,7 @@ enum // EWaTypes
 
     c_m3Type_void,
     c_m3Type_ptr,
-    c_m3Type_trap,
-
-    c_m3Type_runtime
+    c_m3Type_trap
 };
 
 

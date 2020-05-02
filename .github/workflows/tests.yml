@@ -18,7 +18,7 @@ jobs:
         - {target: gcc-debug,   cc: gcc,        flags: -DCMAKE_BUILD_TYPE=Debug   }
         # TODO: fails on numeric operations
         #- {target: gcc-x86,     cc: gcc,        flags: "-m32",                    install: "gcc-multilib"   }
- 
+
     steps:
     - uses: actions/checkout@v2
     - name: Install ${{ matrix.config.install }}
@@ -48,12 +48,12 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Prepare
-      run: apk add build-base cmake python3 --update-cache
+      run: apk add build-base cmake python3 git --update-cache
     - name: Configure
       run: |
         mkdir build
         cd build
-        cmake -DBUILD_WASI=simple ..    # TODO switch to uvwasi
+        cmake ..
     - name: Build
       run: cmake --build build
     - name: Test WebAssembly spec
@@ -140,22 +140,28 @@ jobs:
       run: |
         source $HOME/.wasmer/wasmer.sh
         cd test
-        ./run-spec-test.py --exec "wasmer run --dir=. ../build-wasi/wasm3.wasm -- --repl"
+        python3 run-spec-test.py --exec "wasmer run --dir=. ../build-wasi/wasm3.wasm -- --repl"
+
+    # TODO: Test WASI apps in Wasmer
 
     - name: Configure (native)
       run: |
         mkdir build
         cd build
+        export CFLAGS="-Dd_m3LogOutput=0"
         cmake ..
     - name: Build (native)
       run: |
         cmake --build build
     - name: Test WebAssembly spec (in Wasm3, self-hosting)
-      continue-on-error: true    # TODO
       run: |
         cd test
         cp ../build-wasi/wasm3.wasm ./
-        ./run-spec-test.py --exec "../build/wasm3 ./wasm3.wasm --repl"
+        python3 run-spec-test.py --exec "../build/wasm3 --stack-size 2097152 ../build-wasi/wasm3.wasm --repl"
+    - name: Test WASI apps (in Wasm3, self-hosting)
+      run: |
+        cd test
+        python3 run-wasi-test.py --fast --exec "../build/wasm3 --stack-size 2097152 ../build-wasi/wasm3.wasm"
 
   build-ios:
     runs-on: macos-latest
@@ -196,6 +202,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
+        #- {target: i386,    toolchain: gcc-multilib,              cc: clang -m32,                 qemu: qemu-i386-static    }
         - {target: arm,     toolchain: gcc-arm-linux-gnueabi,     cc: arm-linux-gnueabi-gcc,      qemu: qemu-arm-static     }
         - {target: armhf,   toolchain: gcc-arm-linux-gnueabihf,   cc: arm-linux-gnueabihf-gcc,    qemu: qemu-arm-static     }
         - {target: aarch64, toolchain: gcc-aarch64-linux-gnu,     cc: aarch64-linux-gnu-gcc,      qemu: qemu-aarch64-static }
@@ -210,6 +217,12 @@ jobs:
         - {target: mips64el,toolchain: gcc-mips64el-linux-gnuabi64, cc: mips64el-linux-gnuabi64-gcc,qemu: qemu-mips64el-static }
         - {target: alpha,   toolchain: gcc-alpha-linux-gnu,       cc: alpha-linux-gnu-gcc,        qemu: qemu-alpha-static   }
         - {target: sparc64, toolchain: gcc-sparc64-linux-gnu,     cc: sparc64-linux-gnu-gcc,      qemu: qemu-sparc64-static, skip_wasi: true }
+
+        #- {target: i386 (u64 slots),    toolchain: gcc-multilib,              cc: clang -m32,                 qemu: qemu-i386-static,     cflags: -Dd_m3Use32BitSlots=0  }
+        - {target: arm (u64 slots),     toolchain: gcc-arm-linux-gnueabi,     cc: arm-linux-gnueabi-gcc,      qemu: qemu-arm-static,      cflags: -Dd_m3Use32BitSlots=0  }
+        - {target: aarch64 (u64 slots), toolchain: gcc-aarch64-linux-gnu,     cc: aarch64-linux-gnu-gcc,      qemu: qemu-aarch64-static,  cflags: -Dd_m3Use32BitSlots=0  }
+        - {target: ppc (u64 slots),     toolchain: gcc-powerpc-linux-gnu,     cc: powerpc-linux-gnu-gcc,      qemu: qemu-ppc-static,      cflags: -Dd_m3Use32BitSlots=0  }
+        - {target: ppc64 (u64 slots),   toolchain: gcc-powerpc64-linux-gnu,   cc: powerpc64-linux-gnu-gcc,    qemu: qemu-ppc64-static,    cflags: -Dd_m3Use32BitSlots=0  }
 
     steps:
     - uses: actions/checkout@v2
@@ -275,7 +288,7 @@ jobs:
   build-platformio-arm:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python
@@ -306,7 +319,7 @@ jobs:
   build-platformio-riscv:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python
@@ -422,18 +435,18 @@ jobs:
       run: |
         mkdir build
         cd build
-        g++ -xc++ -Dd_m3HasWASI -Dd_m3LogsDefined \
-            -Dd_m3EnableOpTracing \
-            -Dd_m3LogParse=1 \
-            -Dd_m3LogModule=1 \
-            -Dd_m3LogCompile=1 \
-            -Dd_m3LogWasmStack=1 \
-            -Dd_m3LogEmit=1 \
-            -Dd_m3LogCodePages=1 \
-            -Dd_m3LogExec=1 \
-            -Dd_m3LogRuntime=1 \
-            -Dd_m3LogStackTrace=1 \
-            -Dd_m3LogNativeStack=1 \
+        g++ -xc++ -Dd_m3HasWASI -DDEBUG \
+            -Dd_m3EnableOpTracing=1     \
+            -Dd_m3LogParse=1            \
+            -Dd_m3LogModule=1           \
+            -Dd_m3LogCompile=1          \
+            -Dd_m3LogWasmStack=1        \
+            -Dd_m3LogEmit=1             \
+            -Dd_m3LogCodePages=1        \
+            -Dd_m3LogExec=1             \
+            -Dd_m3LogRuntime=1          \
+            -Dd_m3LogStackTrace=1       \
+            -Dd_m3LogNativeStack=1      \
             -I../source ../source/*.c ../platforms/app/main.c \
             -O3 -g0 -lm \
             -o wasm3
@@ -444,7 +457,7 @@ jobs:
     name: maintenance (preprocess ops)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
     - uses: actions/checkout@v2
     - name: Install sponge
