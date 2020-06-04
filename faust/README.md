@@ -9,7 +9,9 @@ Here are the available options:
 
 - `-nvoices <num> to start the DSP in polyphonic mode with <num> voices`
 - `-midi to activate MIDI control`
-- `-ds <factor> to downsample the DSP by a factor <ds> (must be a power-of-two)`
+- `-ds <factor> to downsample the DSP by a factor <factor> (must be a power-of-two)`
+- `-up <factor> to upsample the DSP by a factor <factor> (must be a power-of-two)`
+- `-filter <type> to use a filter when downsampling or upsampling [1..4] `
 
 To test, clone the repository, and in the 'faust' folder:
 
