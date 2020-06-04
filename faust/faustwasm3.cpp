@@ -59,7 +59,7 @@ static bool isPowerOf2(unsigned int n)
 int main(int argc, char* argv[])
 {
     if (argc == 1 || isopt(argv, "-h") || isopt(argv, "-help") || !endWith(argv[argc-1], ".wasm")) {
-        cout << "faustwas3 [-nvoices <num>] [-midi] [-down-sample <factor>] [-up-sample <factor>] [-filter <type>] foo.wasm" << endl;
+        cout << "faustwas3 [-nvoices <num>] [-midi] [-ds <factor>] [-us <factor>] [-filter <type>] foo.wasm" << endl;
         cout << "Open the http://127.0.0.1:5510 URL to get an http based control\n";
         exit(EXIT_FAILURE);
     }
@@ -79,8 +79,8 @@ int main(int argc, char* argv[])
     
     bool is_midi = isopt(argv, "-midi");
     int nvoices = lopt(argv, "-nvoices", -1);
-    int ds = lopt(argv, "-down-sample", 1);
-    int up = lopt(argv, "-up-sample", 1);
+    int ds = lopt(argv, "-ds", 1);
+    int up = lopt(argv, "-us", 1);
     int filter = lopt(argv, "-filter", 1);
     
     wasm3_dsp_factory factory(argv[argc - 1]);
