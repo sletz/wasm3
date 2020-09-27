@@ -30,6 +30,7 @@
 #include <string.h>
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <cmath>
 #include <vector>
 #include <unistd.h>
