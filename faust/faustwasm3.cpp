@@ -51,11 +51,6 @@ static bool endWith(const string& str, const string& suffix)
     return (i != string::npos) && (i == (str.length() - suffix.length()));
 }
 
-static bool isPowerOf2(unsigned int n)
-{
-    return n == 1 || (n & (n-1)) == 0;
-}
-
 int main(int argc, char* argv[])
 {
     if (argc == 1 || isopt(argv, "-h") || isopt(argv, "-help") || !endWith(argv[argc-1], ".wasm")) {
@@ -69,7 +64,6 @@ int main(int argc, char* argv[])
     char rcfilename[256];
     char* home = getenv("HOME");
     
-    mydsp_poly* dsp_poly = nullptr;
     dsp* DSP = nullptr;
     MidiUI* midiinterface = nullptr;
     
@@ -88,7 +82,7 @@ int main(int argc, char* argv[])
     
     if (nvoices > 0) {
         cout << "Starting polyphonic mode 'nvoices' : " << nvoices << endl;
-        DSP = dsp_poly = new mydsp_poly(DSP, nvoices, true, true);
+        DSP = new mydsp_poly(DSP, nvoices, true, true);
     }
     
     if (ds != 1) {
@@ -164,10 +158,6 @@ int main(int argc, char* argv[])
     jackaudio_midi audio;
     if (!audio.init(filename, DSP)) {
         return 0;
-    }
-    
-    if (nvoices > 0) {
-        audio.addMidiIn(dsp_poly);
     }
     
     if (is_midi) {
