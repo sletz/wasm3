@@ -18,15 +18,17 @@ jobs:
       fail-fast: false
       matrix:
         config:
-        - {target: wasm3-win-x64,   platform: "-A x64",     toolset: "-T ClangCL"   }
-        - {target: wasm3-win-x86,   platform: "-A Win32",   toolset: "-T ClangCL"   }
+        - {target: wasm3-win-x64,           platform: "-A x64",     toolset: "-T ClangCL"   }
+        - {target: wasm3-win-x86,           platform: "-A Win32",   toolset: "-T ClangCL"   }
+        - {target: wasm3-strace-win-x64,    platform: "-A x64",     toolset: "-T ClangCL",  cflags: "-DDEBUG -Dd_m3EnableStrace=2 -Dd_m3RecordBacktraces=1" }
 
     env:
       LDFLAGS: -s
-      CFLAGS: -DM3_APP_MAX_STACK=1048576 -DUSE_HUMAN_FRIENDLY_ARGS
     steps:
     - uses: actions/checkout@v2
     - name: Configure
+      env:
+        CFLAGS: ${{ matrix.config.cflags }}
       run: |
         mkdir build
         cd build
@@ -43,6 +45,28 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  build-cosmopolitan:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build αcτµαlly pδrταblε εxεcµταblε
+      run: |
+        cd platforms/cosmopolitan
+        ./build.sh
+        cp ./wasm3.com ../../wasm3-cosmopolitan.com
+        cp ./wasm3.com.dbg ../../wasm3-cosmopolitan.com.dbg
+    - name: Publish
+      uses: softprops/action-gh-release@v1
+      with:
+        draft: ${{ env.draft }}
+        files: |
+            *.com
+            *.com.dbg
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-wasi:
     runs-on: ubuntu-latest
     name: wasm3-wasi
@@ -50,24 +74,38 @@ jobs:
 
     env:
       LDFLAGS: -s
-      CFLAGS: -DM3_APP_MAX_STACK=1048576 -DUSE_HUMAN_FRIENDLY_ARGS
     steps:
     - uses: actions/checkout@v2
+    - name: Install Python dependencies
+      run: |
+        python3 -m pip install pip==20.1.1
+        python3 -m pip install --upgrade setuptools wheel
+        pip3 --version
     - name: Install Wasienv
+      env:
+        WASMER_RELEASE_TAG: "1.0.2"
       run: curl https://raw.githubusercontent.com/wasienv/wasienv/master/install.sh | sh
     - name: Configure
       run: |
         source $HOME/.wasienv/wasienv.sh
-        wasienv install-sdk 8
-        wasienv default-sdk 8
         mkdir build
         cd build
-        wasimake cmake -DBUILD_WASI=metawasi ..
+        wasimake cmake ..
     - name: Build
       run: |
         source $HOME/.wasienv/wasienv.sh
         cmake --build build
         cp ./build/wasm3.wasm ./wasm3-wasi.wasm
+    - name: Configure, Build wasm3-strace
+      env:
+        CFLAGS: -DDEBUG -Dd_m3EnableStrace=2 -Dd_m3RecordBacktraces=1
+      run: |
+        source $HOME/.wasienv/wasienv.sh
+        mkdir build-strace
+        cd build-strace
+        wasimake cmake ..
+        cmake --build .
+        cp ./wasm3.wasm ../wasm3-strace.wasm
     - name: Publish
       uses: softprops/action-gh-release@v1
       with:
@@ -78,7 +116,7 @@ jobs:
 
   build-android:
     runs-on: ubuntu-latest
-    name: wasm3-android-tests
+    name: wasm3-android-coremark
     timeout-minutes: 10
 
     steps:
@@ -88,13 +126,16 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
+    - name: Install NDK
+      run: |
+        sudo ${ANDROID_HOME}/tools/bin/sdkmanager --install "ndk;22.0.7026061"
     - name: Build
       run: |
         cd platforms/android
         ./gradlew build
     - name: Copy
       run: |
-        cp ./platforms/android/app/build/outputs/apk/debug/app-debug.apk ./wasm3-android-test.apk
+        cp ./platforms/android/app/build/outputs/apk/debug/app-debug.apk ./wasm3-android-coremark.apk
     - name: Publish
       uses: softprops/action-gh-release@v1
       with:

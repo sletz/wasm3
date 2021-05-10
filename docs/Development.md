@@ -10,7 +10,7 @@ make -j8
 ```
 
 Wasm3 is continuously tested with Clang, GCC, MSVC compilers, and on multiple platforms.
-It can be easily integarted into any build system, as shown in `platforms`.
+It can be easily integrated into any build system, as shown in `platforms`.
 
 ## Build on Linux, OS X
 
@@ -48,8 +48,6 @@ Recommended tools:
 ```sh
 # Prepare environment (if needed):
 "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
-set PATH=C:\Program Files\CMake\bin;%PATH%
-set PATH=C:\Program Files\LLVM\bin;%PATH%
 set PATH=C:\Python36-32\;C:\Python36-32\Scripts\;%PATH%
 ```
 
@@ -60,26 +58,29 @@ set PATH=C:\Python36-32\;C:\Python36-32\Scripts\;%PATH%
 mkdir build
 cd build
 
-# Clang, x64
+# Configure Clang, x64
 cmake -G"Visual Studio 16 2019" -A x64 -T ClangCL ..
-cmake --build . --config Release
 
-# Clang, x86
+# Configure Clang, x86
 cmake -G"Visual Studio 16 2019" -A Win32 -T ClangCL ..
-cmake --build . --config Release
 
-# MSVC, x64
+# Configure MSVC, x64
 cmake -G"Visual Studio 16 2019" -A x64 ..
-cmake --build . --config Release
 
-# MSVC, x86
+# Configure MSVC, x86
 cmake -G"Visual Studio 16 2019" -A Win32 ..
+
+# Build
 cmake --build . --config Release
+cp ./Release/wasm3.exe ./
 ```
 
 ### Build with Ninja
 
 ```sh
+set PATH=C:\Program Files\CMake\bin;%PATH%
+set PATH=C:\Program Files\LLVM\bin;%PATH%
+
 # Clang
 cmake -GNinja -DCLANG_CL=1 ..
 ninja
@@ -87,6 +88,25 @@ ninja
 # MSVC
 cmake -GNinja ..
 ninja
+```
+
+## Build using compiler directly
+
+This can be useful for cross-compilation, quick builds or when a build system (CMake, Ninja, etc.) is not available.
+
+### gcc/clang
+```sh
+gcc -O3 -g0 -s -Isource -Dd_m3HasWASI source/*.c platforms/app/main.c -lm -o wasm3
+```
+
+### msvc/clang-cl
+```sh
+cl source/*.c platforms/app/main.c /Isource /MD /Ox /Oy /Gw /GS- /W0 /Dd_m3HasWASI /Fewasm3.exe /link advapi32.lib
+```
+
+### mingw-w64
+```sh
+x86_64-w64-mingw32-gcc -O3 -g0 -s -Isource -Dd_m3HasWASI source/*.c platforms/app/main.c -lm -lpthread -static -o wasm3.exe
 ```
 
 ## Build for microcontrollers

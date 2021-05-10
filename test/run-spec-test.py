@@ -3,12 +3,13 @@
 # Author: Volodymyr Shymanskyy
 # Usage:
 #   ./run-spec-test.py
-#   ./run-spec-test.py ./core/i32.json
-#   ./run-spec-test.py ./core/float_exprs.json --line 2070
-#   ./run-spec-test.py ./proposals/tail-call/*.json
+#   ./run-spec-test.py --spec=opam-1.1.1
+#   ./run-spec-test.py .spec-v1.1/core/i32.json
+#   ./run-spec-test.py .spec-v1.1/core/float_exprs.json --line 2070
+#   ./run-spec-test.py .spec-v1.1/proposals/tail-call/*.json
 #   ./run-spec-test.py --exec "../build-custom/wasm3 --repl"
 #
-# Running WASI verison with different engines:
+# Running WASI version with different engines:
 #   cp ../build-wasi/wasm3.wasm ./
 #   ./run-spec-test.py --exec "../build/wasm3 wasm3.wasm --repl"
 #   ./run-spec-test.py --exec "wasmtime --dir=. wasm3.wasm -- --repl"
@@ -48,6 +49,7 @@ from pprint import pprint
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--exec", metavar="<interpreter>", default="../build/wasm3 --repl")
+parser.add_argument("--spec",                          default="opam-1.1.1")
 parser.add_argument("--timeout", type=int,             default=30)
 parser.add_argument("--line", metavar="<source line>", type=int)
 parser.add_argument("--all", action="store_true")
@@ -80,6 +82,10 @@ def fatal(msg):
     log.flush()
     print(f"{ansi.FAIL}Fatal:{ansi.ENDC} {msg}")
     sys.exit(1)
+    
+def safe_fn(fn):
+    keepcharacters = (' ','.','_','-')
+    return "".join(c for c in fn if c.isalnum() or c in keepcharacters).strip()
 
 def binaryToFloat(num, t):
     if t == "f32":
@@ -93,7 +99,7 @@ def escape_str(s):
     if s == "":
         return r'\x00'
 
-    if all((ord(c) < 128 and c.isprintable() and not c in " \n\r\t\\") for c in s):
+    if all((ord(c) < 128 and c.isprintable() and c not in " \n\r\t\\") for c in s):
         return s
 
     return '\\x' + '\\x'.join('{0:02x}'.format(x) for x in s.encode('utf-8'))
@@ -122,7 +128,8 @@ def formatValueFloat(num, t):
         return str(num)
 
     result = "{0:.{1}f}".format(binaryToFloat(num, t), s).rstrip('0')
-    if result.endswith('.'): result = result + '0'
+    if result.endswith('.'):
+        result = result + '0'
     if len(result) > s*2:
         result = "{0:.{1}e}".format(binaryToFloat(num, t), s)
     return result
@@ -141,12 +148,14 @@ if args.format == "fp":
 # Spec tests preparation
 #
 
-if not (os.path.isdir("./core") and os.path.isdir("./proposals")):
+spec_dir = os.path.join(".", ".spec-" + safe_fn(args.spec))
+
+if not (os.path.isdir(spec_dir)):
     from io import BytesIO
     from zipfile import ZipFile
     from urllib.request import urlopen
 
-    officialSpec = "https://github.com/wasm3/wasm-core-testsuite/archive/v1.1.zip"
+    officialSpec = f"https://github.com/wasm3/wasm-core-testsuite/archive/{args.spec}.zip"
 
     print(f"Downloading {officialSpec}")
     resp = urlopen(officialSpec)
@@ -156,8 +165,8 @@ if not (os.path.isdir("./core") and os.path.isdir("./proposals")):
                 parts = pathlib.Path(zipInfo.filename).parts
                 newpath = str(pathlib.Path(*parts[1:-1]))
                 newfn   = str(pathlib.Path(*parts[-1:]))
-                ensure_path(newpath)
-                newpath = newpath + "/" + newfn
+                ensure_path(os.path.join(spec_dir, newpath))
+                newpath = os.path.join(spec_dir, newpath, newfn)
                 zipInfo.filename = newpath
                 zipFile.extract(zipInfo)
 
@@ -236,7 +245,7 @@ class Wasm3():
         return res
 
     def invoke(self, cmd):
-        return self._run_cmd(" ".join(map(str, cmd)) + "\n")
+        return self._run_cmd(":invoke " + " ".join(map(str, cmd)) + "\n")
 
     def _run_cmd(self, cmd):
         if self.autorestart and not self._is_running():
@@ -255,7 +264,7 @@ class Wasm3():
         while time.time() < tout:
             try:
                 data = self.q.get(timeout=0.1)
-                if data == None:
+                if data is None:
                     error = "Crashed"
                     break
                 buff = buff + data.decode("utf-8")
@@ -275,7 +284,7 @@ class Wasm3():
         self.p.stdin.flush()
 
     def _is_running(self):
-        return self.p and (self.p.poll() == None)
+        return self.p and (self.p.poll() is None)
 
     def _flush_input(self):
         while not self.q.empty():
@@ -286,6 +295,34 @@ class Wasm3():
         self.p.terminate()
         self.p.wait(timeout=1.0)
         self.p = None
+
+#
+# Multi-value result handling
+#
+
+def parseResults(s):
+    values = s.split(", ")
+    values = [x.split(":") for x in values]
+    values = [{ "type": x[1], "value": int(x[0]) } for x in values]
+
+    return normalizeResults(values)
+
+def normalizeResults(values):
+    for x in values:
+        t = x["type"]
+        v = x["value"]
+        if t == "f32" or t == "f64":
+            if v == "nan:canonical" or v == "nan:arithmetic" or math.isnan(binaryToFloat(v, t)):
+                x["value"] = "nan:any"
+            else:
+                x["value"] = formatValue(v, t)
+        else:
+            x["value"] = formatValue(v, t)
+    return values
+
+def combineResults(values):
+    values = [x["value"]+":"+x["type"] for x in values]
+    return ", ".join(values)
 
 #
 # Actual test
@@ -393,25 +430,11 @@ def runInvoke(test):
     if "expected" in test:
         if len(test.expected) == 0:
             expect = "result <Empty Stack>"
-        elif len(test.expected) == 1:
-            t = test.expected[0]['type']
-            value = str(test.expected[0]['value'])
-            expect = "result " + value
-
-            if actual_val != None:
-                if (t == "f32" or t == "f64") and (value == "nan:canonical" or value == "nan:arithmetic"):
-                    val = binaryToFloat(actual_val, t)
-                    #warning(f"{actual_val} => {val}")
-                    if math.isnan(val):
-                        actual = "nan:any"
-                        expect = "nan:any"
-                else:
-                    expect = "result " + formatValue(value, t)
-                    actual = "result " + formatValue(actual_val, t)
-
         else:
-            warning(f"Test {test.source} specifies multiple results")
-            expect = "result <Multiple>"
+            if actual_val is not None:
+                actual = "result " + combineResults(parseResults(actual_val))
+            expect = "result " + combineResults(normalizeResults(test.expected))
+
     elif "expected_trap" in test:
         if test.expected_trap in trapmap:
             test.expected_trap = trapmap[test.expected_trap]
@@ -441,7 +464,8 @@ def runInvoke(test):
     else:
         stats.failed += 1
         log.write(f"FAIL: {actual}, should be: {expect}\n")
-        if args.silent: return
+        if args.silent:
+            return
 
         showTestResult()
         #sys.exit(1)
@@ -449,9 +473,9 @@ def runInvoke(test):
 if args.file:
     jsonFiles = args.file
 else:
-    jsonFiles  = glob.glob(os.path.join(".", "core", "*.json"))
-    jsonFiles += glob.glob(os.path.join(".", "proposals", "sign-extension-ops", "*.json"))
-    jsonFiles += glob.glob(os.path.join(".", "proposals", "nontrapping-float-to-int-conversions", "*.json"))
+    jsonFiles  = glob.glob(os.path.join(spec_dir, "core", "*.json"))
+    jsonFiles += glob.glob(os.path.join(spec_dir, "proposals", "sign-extension-ops", "*.json"))
+    jsonFiles += glob.glob(os.path.join(spec_dir, "proposals", "nontrapping-float-to-int-conversions", "*.json"))
 
 jsonFiles = list(map(lambda x: os.path.relpath(x, scriptDir), jsonFiles))
 jsonFiles.sort()
@@ -482,7 +506,9 @@ for fn in jsonFiles:
 
             try:
                 wasm_fn = os.path.join(pathname(fn), wasm_module)
-                wasm3.load(wasm_fn)
+                res = wasm3.load(wasm_fn)
+                if res:
+                    warning(res)
             except Exception as e:
                 pass #fatal(str(e))
 
@@ -563,3 +589,8 @@ elif stats.success > 0:
     if stats.skipped > 0:
         print(f"{ansi.WARNING} ({stats.skipped} tests skipped){ansi.OKGREEN}")
     print(f"======================={ansi.ENDC}")
+    
+elif stats.total_run == 0:
+    print("Error: No tests run")
+    sys.exit(1)
+

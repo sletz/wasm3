@@ -15,7 +15,6 @@
 #include <sys/mman.h>
 
 #include "wasm3.h"
-#include "m3_env.h"
 #include "m3_config.h"
 
 #include "fib32.wasm.h"
@@ -55,7 +54,7 @@ void run_wasm()
     M3Result result = m3Err_none;
 
     uint8_t* wasm = (uint8_t*)fib32_wasm;
-    uint32_t fsize = fib32_wasm_len - 1;
+    uint32_t fsize = fib32_wasm_len;
 
     printf("Loading WebAssembly...\n");
 
@@ -81,14 +80,17 @@ void run_wasm()
     const char* i_argv[2] = { FIB_ARG_VALUE, NULL };
 
     clock_t start = clock();
-    result = m3_CallWithArgs (f, 1, i_argv);
+    result = m3_CallArgv (f, 1, i_argv);
     clock_t end = clock();
 
-    if (result) FATAL("m3_CallWithArgs: %s", result);
+    if (result) FATAL("m3_Call: %s", result);
     printf("Elapsed: %ld ms\n\n", (end - start) * 1000 / CLOCKS_PER_SEC);
 
-    // uint64_t value = *(uint64_t*)(runtime->stack);
-    // printf("Result: %llu\n", value);
+    uint32_t value = 0;
+    result = m3_GetResultsV (f, &value);
+    if (result) FATAL("m3_GetResults: %s", result);
+
+    printf("Result: %d\n", value);
 }
 
 static void* runMain(void* ctx)

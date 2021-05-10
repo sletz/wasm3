@@ -18,7 +18,7 @@
 #define M3_CONCAT__(a,b) a##b
 #define M3_CONCAT(a,b)   M3_CONCAT__(a,b)
 
-# if !defined(__cplusplus)
+# if !defined(__cplusplus) || defined(_MSC_VER)
 #   define not      !
 #   define and      &&
 #   define or       ||
@@ -353,6 +353,8 @@ typedef int8_t          i8;
 
 # if defined (M3_COMPILER_MSVC)
 #   define vectorcall   // For MSVC, better not to specify any call convention
+# elif defined(__MINGW32__)
+#   define vectorcall
 # elif defined(WIN32)
 #   define vectorcall   __vectorcall
 # elif defined (ESP8266)
@@ -404,11 +406,8 @@ typedef int8_t          i8;
 
 # if defined(ARDUINO) || defined(PARTICLE) || defined(PLATFORMIO) || defined(__MBED__) || \
      defined(ESP8266) || defined(ESP32) || defined(BLUE_PILL) || defined(WM_W600) || defined(FOMU)
-#  ifndef d_m3LogOutput
-#    define d_m3LogOutput                       false
-#  endif
-#  ifndef d_m3VerboseLogs
-#    define d_m3VerboseLogs                     false
+#  ifndef d_m3VerboseErrorMessages
+#    define d_m3VerboseErrorMessages            0
 #  endif
 #  ifndef d_m3MaxFunctionStackHeight
 #    define d_m3MaxFunctionStackHeight          64
