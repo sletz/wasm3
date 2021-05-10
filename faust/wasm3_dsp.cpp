@@ -35,7 +35,7 @@ extern "C" {
         m3ApiReturnType (int32_t)
         m3ApiGetArg(int32_t, val)
         m3ApiReturn(std::abs(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
 
     // Float versions
@@ -44,7 +44,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::acos(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_asinf)
@@ -52,7 +52,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::asin(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_atanf)
@@ -60,7 +60,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::atan(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_atan2f)
@@ -69,7 +69,7 @@ extern "C" {
         m3ApiGetArg(float, val1)
         m3ApiGetArg(float, val2)
         m3ApiReturn(std::atan2(val1, val2));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_cosf)
@@ -77,7 +77,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::cos(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_expf)
@@ -85,7 +85,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::exp(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_fmodf)
@@ -94,7 +94,7 @@ extern "C" {
         m3ApiGetArg(float, val1)
         m3ApiGetArg(float, val2)
         m3ApiReturn(std::fmod(val1, val2));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_logf)
@@ -102,7 +102,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::log(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_log10f)
@@ -110,7 +110,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::log10(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_powf)
@@ -119,7 +119,7 @@ extern "C" {
         m3ApiGetArg(float, val1)
         m3ApiGetArg(float, val2)
         m3ApiReturn(std::pow(val1, val2));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_remainderf)
@@ -128,7 +128,7 @@ extern "C" {
         m3ApiGetArg(float, val1)
         m3ApiGetArg(float, val2)
         m3ApiReturn(std::remainder(val1, val2));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_roundf)
@@ -136,7 +136,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::round(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_sinf)
@@ -144,7 +144,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::sin(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_tanf)
@@ -152,7 +152,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::tan(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_acoshf)
@@ -160,7 +160,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::acosh(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_asinhf)
@@ -168,7 +168,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::asinh(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_atanhf)
@@ -176,7 +176,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::atanh(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_coshf)
@@ -184,7 +184,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::cosh(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_sinhf)
@@ -192,7 +192,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::sinh(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_tanhf)
@@ -200,7 +200,7 @@ extern "C" {
         m3ApiReturnType (float)
         m3ApiGetArg(float, val)
         m3ApiReturn(std::tanh(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     // Double versions
@@ -209,7 +209,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::acos(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_asin)
@@ -217,7 +217,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::asin(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_atan)
@@ -225,7 +225,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::atan(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_atan2)
@@ -234,7 +234,7 @@ extern "C" {
         m3ApiGetArg(double, val1)
         m3ApiGetArg(double, val2)
         m3ApiReturn(std::atan2(val1, val2));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_cos)
@@ -242,7 +242,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::cos(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_exp)
@@ -250,7 +250,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::exp(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_fmod)
@@ -259,7 +259,7 @@ extern "C" {
         m3ApiGetArg(double, val1)
         m3ApiGetArg(double, val2)
         m3ApiReturn(std::fmod(val1, val2));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_log)
@@ -267,7 +267,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::log(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_log10)
@@ -275,7 +275,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::log10(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_pow)
@@ -284,7 +284,7 @@ extern "C" {
         m3ApiGetArg(double, val1)
         m3ApiGetArg(double, val2)
         m3ApiReturn(std::pow(val1, val2));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_remainder)
@@ -293,7 +293,7 @@ extern "C" {
         m3ApiGetArg(double, val1)
         m3ApiGetArg(double, val2)
         m3ApiReturn(std::remainder(val1, val2));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_round)
@@ -301,7 +301,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::round(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_sin)
@@ -309,7 +309,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::sin(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_tan)
@@ -317,7 +317,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::tan(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_acosh)
@@ -325,7 +325,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::acosh(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_asinh)
@@ -333,7 +333,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::asinh(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_atanh)
@@ -341,7 +341,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::atanh(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_cosh)
@@ -349,7 +349,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::cosh(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_sinh)
@@ -357,7 +357,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::sinh(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
     static m3ApiRawFunction(m3_wasm3_tanh)
@@ -365,7 +365,7 @@ extern "C" {
         m3ApiReturnType (double)
         m3ApiGetArg(double, val)
         m3ApiReturn(std::tanh(val));
-        return m3Err_none;
+        m3ApiSuccess();
     }
     
 #ifdef __cplusplus

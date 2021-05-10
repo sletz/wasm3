@@ -46,8 +46,6 @@
 #define FATAL_RET(msg, ...) { printf("Fatal: " msg "\n", ##__VA_ARGS__); return nullptr; }
 #define FATAL_INT(msg, ...) { printf("Fatal: " msg "\n", ##__VA_ARGS__); return -1; }
 
-typedef const void* (ModuleFun) (IM3Runtime runtime, uint64_t* _sp, void* _mem);
-
 struct wasm3_dsp_factory : public wasm_dsp_factory_imp {
     
     const uint8_t* fBytes;
@@ -81,12 +79,9 @@ class wasm3_dsp : public wasm_dsp_imp {
         IM3Runtime fInstance;
         IM3Function fCompute;
     
-        void addFunction(const char* name, const char* type, ModuleFun fun)
+        void addFunction(const char* name, const char* type, M3RawCall fun)
         {
-            if (v_FindFunction(fModule, name)) {
-                M3Result result = m3_LinkRawFunction(fModule, "env", name, type, fun);
-                if (result) FATAL("addFunction: %s", result);
-            }
+            M3Result result = m3_LinkRawFunction(fModule, "env", name, type, fun);
         }
 
     public:
@@ -106,7 +101,7 @@ class wasm3_dsp : public wasm_dsp_imp {
             if (result) FATAL_INT("m3_FindFunction: %s", result);
   
             const char* i_argv[2] = { "0", NULL };
-            result = m3_CallWithArgs(f, 1, i_argv);
+            result = m3_CallArgv(f, 1, i_argv);
 
             uint64_t value = *(uint64_t*)(fInstance->stack);
             return value;
@@ -119,7 +114,7 @@ class wasm3_dsp : public wasm_dsp_imp {
             if (result) FATAL_INT("m3_FindFunction: %s", result);
             
             const char* i_argv[2] = { "0", NULL };
-            result = m3_CallWithArgs(f, 1, i_argv);
+            result = m3_CallArgv(f, 1, i_argv);
             
             uint64_t value = *(uint64_t*)(fInstance->stack);
             return value;
@@ -132,7 +127,7 @@ class wasm3_dsp : public wasm_dsp_imp {
             if (result) FATAL_INT("m3_FindFunction: %s", result);
             
             const char* i_argv[2] = { "0", NULL };
-            result = m3_CallWithArgs(f, 1, i_argv);
+            result = m3_CallArgv(f, 1, i_argv);
             
             uint64_t value = *(uint64_t*)(fInstance->stack);
             return value;
@@ -145,7 +140,7 @@ class wasm3_dsp : public wasm_dsp_imp {
             if (result) FATAL("m3_FindFunction: %s", result);
             
             const char* i_argv[3] = { "0", std::to_string(sample_rate).c_str(), NULL };
-            result = m3_CallWithArgs(f, 2, i_argv);
+            result = m3_CallArgv(f, 2, i_argv);
         }
         
         virtual void instanceInit(int sample_rate)
@@ -155,7 +150,7 @@ class wasm3_dsp : public wasm_dsp_imp {
             if (result) FATAL("m3_FindFunction: %s", result);
             
             const char* i_argv[3] = { "0", std::to_string(sample_rate).c_str(), NULL };
-            result = m3_CallWithArgs(f, 2, i_argv);
+            result = m3_CallArgv(f, 2, i_argv);
         }
         
         virtual void instanceConstants(int sample_rate)
@@ -165,7 +160,7 @@ class wasm3_dsp : public wasm_dsp_imp {
             if (result) FATAL("m3_FindFunction: %s", result);
             
             const char* i_argv[3] = { "0", std::to_string(sample_rate).c_str(), NULL };
-            result = m3_CallWithArgs(f, 2, i_argv);
+            result = m3_CallArgv(f, 2, i_argv);
         }
         
         virtual void instanceResetUserInterface()
@@ -175,7 +170,7 @@ class wasm3_dsp : public wasm_dsp_imp {
             if (result) FATAL("m3_FindFunction: %s", result);
             
             const char* i_argv[2] = { "0", NULL };
-            result = m3_CallWithArgs(f, 1, i_argv);
+            result = m3_CallArgv(f, 1, i_argv);
         }
         
         virtual void instanceClear()
@@ -185,7 +180,7 @@ class wasm3_dsp : public wasm_dsp_imp {
             if (result) FATAL("m3_FindFunction: %s", result);
             
             const char* i_argv[2] = { "0", NULL };
-            result = m3_CallWithArgs(f, 1, i_argv);
+            result = m3_CallArgv(f, 1, i_argv);
         }
        
         virtual wasm3_dsp* clone()
@@ -202,7 +197,7 @@ class wasm3_dsp : public wasm_dsp_imp {
             
             // Call wasm code
             const char* i_argv[5] = { "0", std::to_string(count).c_str(), std::to_string(fWasmInputs).c_str(), std::to_string(fWasmOutputs).c_str(), NULL };
-            M3Result result = m3_CallWithArgs(fCompute, 4, i_argv);
+            M3Result result = m3_CallArgv(fCompute, 4, i_argv);
             
             // Copy audio outputs
             for (int i = 0; i < fFactory->fDecoder->getNumOutputs(); i++) {
